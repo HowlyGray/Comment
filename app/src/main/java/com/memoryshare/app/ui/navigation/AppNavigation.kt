@@ -13,6 +13,7 @@ import androidx.navigation.navArgument
 import com.memoryshare.app.ui.screens.*
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
+import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
@@ -23,7 +24,8 @@ fun AppNavigation(
     userViewModel: UserViewModel,
     messageViewModel: MessageViewModel,
     postViewModel: PostViewModel,
-    spaceViewModel: SharedSpaceViewModel
+    spaceViewModel: SharedSpaceViewModel,
+    preferencesViewModel: PreferencesViewModel
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -61,6 +63,7 @@ fun AppNavigation(
             MessagesScreen(
                 viewModel = messageViewModel,
                 userViewModel = userViewModel,
+                preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onConversationClick = { conversationId ->
                     navController.navigate(Screen.MessageDetail.createRoute(conversationId))
@@ -160,6 +163,7 @@ fun AppNavigation(
         composable(Screen.Feed.route) {
             FeedScreen(
                 viewModel = postViewModel,
+                preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onPostClick = { postId ->
                     navController.navigate(Screen.PostDetail.createRoute(postId))
@@ -192,6 +196,7 @@ fun AppNavigation(
         composable(Screen.Memories.route) {
             MemoriesScreen(
                 viewModel = spaceViewModel,
+                preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onSpaceClick = { spaceId ->
                     navController.navigate(Screen.MemorySpace.createRoute(spaceId))
@@ -224,6 +229,7 @@ fun AppNavigation(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 viewModel = userViewModel,
+                preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onNavigateToMessages = {
                     navController.navigate(Screen.Messages.route)

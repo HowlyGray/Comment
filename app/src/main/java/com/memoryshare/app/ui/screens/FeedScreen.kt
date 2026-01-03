@@ -26,6 +26,7 @@ import java.util.*
 @Composable
 fun FeedScreen(
     viewModel: PostViewModel,
+    preferencesViewModel: com.memoryshare.app.ui.viewmodel.PreferencesViewModel,
     currentUser: User?,
     onPostClick: (String) -> Unit,
     onNavigateToMessages: () -> Unit,
@@ -33,16 +34,12 @@ fun FeedScreen(
     onNavigateToProfile: () -> Unit
 ) {
     val posts by viewModel.posts.collectAsState()
+    val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Fil d'actualité", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { /* Créer nouvelle publication */ }) {
-                        Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
-                    }
-                }
+                title = { Text("Fil d'actualité", fontWeight = FontWeight.Bold) }
             )
         },
         bottomBar = {
@@ -53,6 +50,23 @@ fun FeedScreen(
                 onNavigateToMemories = onNavigateToMemories,
                 onNavigateToProfile = onNavigateToProfile
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { /* Créer nouvelle publication */ },
+                modifier = if (fabOnLeft) {
+                    Modifier.padding(start = 16.dp)
+                } else {
+                    Modifier
+                }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
+            }
+        },
+        floatingActionButtonPosition = if (fabOnLeft) {
+            FabPosition.Start
+        } else {
+            FabPosition.End
         }
     ) { paddingValues ->
         if (posts.isEmpty()) {

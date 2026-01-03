@@ -26,6 +26,7 @@ import java.util.*
 fun MessagesScreen(
     viewModel: MessageViewModel,
     userViewModel: com.memoryshare.app.ui.viewmodel.UserViewModel,
+    preferencesViewModel: com.memoryshare.app.ui.viewmodel.PreferencesViewModel,
     currentUser: User?,
     onConversationClick: (String) -> Unit,
     onNewConversation: () -> Unit,
@@ -35,16 +36,12 @@ fun MessagesScreen(
 ) {
     val conversations by viewModel.conversations.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
+    val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Conversations", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = onNewConversation) {
-                        Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
-                    }
-                }
+                title = { Text("Conversations", fontWeight = FontWeight.Bold) }
             )
         },
         bottomBar = {
@@ -55,6 +52,23 @@ fun MessagesScreen(
                 onNavigateToMemories = onNavigateToMemories,
                 onNavigateToProfile = onNavigateToProfile
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNewConversation,
+                modifier = if (fabOnLeft) {
+                    Modifier.padding(start = 16.dp)
+                } else {
+                    Modifier
+                }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
+            }
+        },
+        floatingActionButtonPosition = if (fabOnLeft) {
+            FabPosition.Start
+        } else {
+            FabPosition.End
         }
     ) { paddingValues ->
         if (conversations.isEmpty()) {

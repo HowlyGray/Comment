@@ -21,6 +21,7 @@ import com.memoryshare.app.ui.navigation.AppNavigation
 import com.memoryshare.app.ui.theme.MemoryShareTheme
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
+import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 
@@ -92,12 +93,14 @@ fun MemoryShareApp(
     val spaceViewModel = viewModel<SharedSpaceViewModel>(
         factory = ViewModelFactory(spaceRepository)
     )
+    val preferencesViewModel = PreferencesViewModel(preferencesManager)
 
     AppNavigation(
         navController = navController,
         userViewModel = userViewModel,
         messageViewModel = messageViewModel,
         postViewModel = postViewModel,
-        spaceViewModel = spaceViewModel
+        spaceViewModel = spaceViewModel,
+        preferencesViewModel = preferencesViewModel
     )
 }

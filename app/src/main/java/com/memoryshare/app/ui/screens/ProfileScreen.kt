@@ -21,6 +21,7 @@ import com.memoryshare.app.ui.viewmodel.UserViewModel
 @Composable
 fun ProfileScreen(
     viewModel: UserViewModel,
+    preferencesViewModel: com.memoryshare.app.ui.viewmodel.PreferencesViewModel,
     currentUser: User?,
     onNavigateToMessages: () -> Unit,
     onNavigateToFeed: () -> Unit,
@@ -28,6 +29,7 @@ fun ProfileScreen(
     onLogout: () -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
+    val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
 
     Scaffold(
         topBar = {
@@ -129,6 +131,41 @@ fun ProfileScreen(
                     icon = Icons.Default.Help,
                     title = "Aide",
                     onClick = {}
+                )
+
+                Divider()
+
+                // Section Accessibilité
+                Text(
+                    text = "Accessibilité",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+
+                ListItem(
+                    headlineContent = {
+                        Text("Boutons pour gauchers")
+                    },
+                    supportingContent = {
+                        Text(
+                            text = "Placer les boutons d'action à gauche",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Accessible,
+                            contentDescription = "Accessibilité"
+                        )
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = fabOnLeft,
+                            onCheckedChange = { preferencesViewModel.setFabOnLeft(it) }
+                        )
+                    }
                 )
 
                 Divider()

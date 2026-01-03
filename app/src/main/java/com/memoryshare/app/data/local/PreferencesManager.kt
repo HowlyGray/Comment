@@ -12,6 +12,7 @@ class PreferencesManager(context: Context) {
     companion object {
         private const val PREFS_NAME = "memoryshare_prefs"
         private const val KEY_CURRENT_USER_ID = "current_user_id"
+        private const val KEY_FAB_ON_LEFT = "fab_on_left"
     }
 
     fun saveCurrentUserId(userId: String?) {
@@ -31,5 +32,13 @@ class PreferencesManager(context: Context) {
 
     fun clearCurrentUser() {
         prefs.edit().remove(KEY_CURRENT_USER_ID).apply()
+    }
+
+    fun setFabOnLeft(onLeft: Boolean) {
+        prefs.edit().putBoolean(KEY_FAB_ON_LEFT, onLeft).apply()
+    }
+
+    fun isFabOnLeft(): Boolean {
+        return prefs.getBoolean(KEY_FAB_ON_LEFT, false)
     }
 }

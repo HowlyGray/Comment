@@ -25,6 +25,7 @@ import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 @Composable
 fun MemoriesScreen(
     viewModel: SharedSpaceViewModel,
+    preferencesViewModel: com.memoryshare.app.ui.viewmodel.PreferencesViewModel,
     currentUser: User?,
     onSpaceClick: (String) -> Unit,
     onNavigateToMessages: () -> Unit,
@@ -32,17 +33,13 @@ fun MemoriesScreen(
     onNavigateToProfile: () -> Unit
 ) {
     val spaces by viewModel.spaces.collectAsState()
+    val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Espaces partagés", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { showCreateDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Nouvel espace")
-                    }
-                }
+                title = { Text("Espaces partagés", fontWeight = FontWeight.Bold) }
             )
         },
         bottomBar = {
@@ -53,6 +50,23 @@ fun MemoriesScreen(
                 onNavigateToMemories = {},
                 onNavigateToProfile = onNavigateToProfile
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showCreateDialog = true },
+                modifier = if (fabOnLeft) {
+                    Modifier.padding(start = 16.dp)
+                } else {
+                    Modifier
+                }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nouvel espace")
+            }
+        },
+        floatingActionButtonPosition = if (fabOnLeft) {
+            FabPosition.Start
+        } else {
+            FabPosition.End
         }
     ) { paddingValues ->
         if (spaces.isEmpty()) {
