@@ -53,6 +53,9 @@ fun AppNavigation(
                 onConversationClick = { conversationId ->
                     navController.navigate(Screen.MessageDetail.createRoute(conversationId))
                 },
+                onNewConversation = {
+                    navController.navigate(Screen.SelectContact.route)
+                },
                 onNavigateToFeed = {
                     navController.navigate(Screen.Feed.route)
                 },
@@ -62,6 +65,61 @@ fun AppNavigation(
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
                 }
+            )
+        }
+
+        composable(Screen.SelectContact.route) {
+            SelectContactScreen(
+                userViewModel = userViewModel,
+                currentUser = currentUser,
+                onContactSelected = { selectedUser ->
+                    // Créer une conversation avec le contact sélectionné
+                    currentUser?.let { user ->
+                        messageViewModel.createConversation(
+                            participantIds = listOf(user.id, selectedUser.id),
+                            name = null,
+                            isGroup = false
+                        )
+                    }
+                    navController.popBackStack()
+                },
+                onCreateGroup = {
+                    navController.navigate(Screen.CreateGroup.route)
+                },
+                onAddNewContact = {
+                    navController.navigate(Screen.AddContact.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.CreateGroup.route) {
+            CreateGroupScreen(
+                userViewModel = userViewModel,
+                currentUser = currentUser,
+                onCreateGroup = { selectedUsers, groupName ->
+                    // Créer un groupe avec les utilisateurs sélectionnés
+                    currentUser?.let { user ->
+                        val participantIds = selectedUsers.map { it.id } + user.id
+                        messageViewModel.createConversation(
+                            participantIds = participantIds,
+                            name = groupName,
+                            isGroup = true
+                        )
+                    }
+                    navController.popBackStack(Screen.Messages.route, inclusive = false)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AddContact.route) {
+            AddContactScreen(
+                userViewModel = userViewModel,
+                onContactAdded = {
+                    navController.popBackStack()
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 

@@ -3,6 +3,9 @@ package com.memoryshare.app.ui.navigation
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Messages : Screen("messages")
+    object SelectContact : Screen("select_contact")
+    object CreateGroup : Screen("create_group")
+    object AddContact : Screen("add_contact")
     object MessageDetail : Screen("messages/{conversationId}") {
         fun createRoute(conversationId: String) = "messages/$conversationId"
     }

@@ -27,6 +27,7 @@ fun MessagesScreen(
     viewModel: MessageViewModel,
     currentUser: User?,
     onConversationClick: (String) -> Unit,
+    onNewConversation: () -> Unit,
     onNavigateToFeed: () -> Unit,
     onNavigateToMemories: () -> Unit,
     onNavigateToProfile: () -> Unit
@@ -38,7 +39,7 @@ fun MessagesScreen(
             TopAppBar(
                 title = { Text("Conversations", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = { /* Créer nouvelle conversation */ }) {
+                    IconButton(onClick = onNewConversation) {
                         Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
                     }
                 }
