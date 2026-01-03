@@ -23,7 +23,8 @@ fun MemorySpaceScreen(
     spaceId: String,
     viewModel: SharedSpaceViewModel,
     currentUser: User?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAddMedia: () -> Unit
 ) {
     val space by viewModel.currentSpace.collectAsState()
     val media by viewModel.media.collectAsState()
@@ -102,7 +103,7 @@ fun MemorySpaceScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* Ajouter média */ }
+                onClick = onAddMedia
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Ajouter un média")
             }

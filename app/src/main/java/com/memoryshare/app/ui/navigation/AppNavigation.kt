@@ -246,7 +246,26 @@ fun AppNavigation(
                 spaceId = spaceId,
                 viewModel = spaceViewModel,
                 currentUser = currentUser,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onAddMedia = {
+                    navController.navigate(Screen.AddMedia.createRoute(spaceId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.AddMedia.route,
+            arguments = listOf(navArgument("spaceId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val spaceId = backStackEntry.arguments?.getString("spaceId") ?: return@composable
+            AddMediaScreen(
+                spaceId = spaceId,
+                viewModel = spaceViewModel,
+                currentUser = currentUser,
+                onBack = { navController.popBackStack() },
+                onMediaAdded = {
+                    navController.popBackStack()
+                }
             )
         }
 

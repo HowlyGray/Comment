@@ -18,6 +18,9 @@ sealed class Screen(val route: String) {
     object MemorySpace : Screen("memories/{spaceId}") {
         fun createRoute(spaceId: String) = "memories/$spaceId"
     }
+    object AddMedia : Screen("memories/{spaceId}/add") {
+        fun createRoute(spaceId: String) = "memories/$spaceId/add"
+    }
     object Profile : Screen("profile")
     object Settings : Screen("settings")
 }
