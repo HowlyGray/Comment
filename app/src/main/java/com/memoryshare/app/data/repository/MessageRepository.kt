@@ -6,6 +6,7 @@ import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
 class MessageRepository(
@@ -54,15 +55,14 @@ class MessageRepository(
         messageDao.insertMessage(message)
 
         // Mettre à jour la conversation avec le dernier message
-        conversationDao.getConversationById(conversationId).collect { conversation ->
-            conversation?.let {
-                conversationDao.updateConversation(
-                    it.copy(
-                        lastMessageText = content,
-                        lastMessageTime = message.timestamp
-                    )
+        val conversation = conversationDao.getConversationById(conversationId).firstOrNull()
+        conversation?.let {
+            conversationDao.updateConversation(
+                it.copy(
+                    lastMessageText = content,
+                    lastMessageTime = message.timestamp
                 )
-            }
+            )
         }
 
         return message

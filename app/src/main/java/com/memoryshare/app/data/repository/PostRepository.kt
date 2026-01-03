@@ -6,6 +6,7 @@ import com.memoryshare.app.data.model.Comment
 import com.memoryshare.app.data.model.Post
 import com.memoryshare.app.data.model.PostMediaType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
 class PostRepository(
@@ -65,10 +66,9 @@ class PostRepository(
         commentDao.insertComment(comment)
 
         // Mettre à jour le nombre de commentaires
-        postDao.getPostById(postId).collect { post ->
-            post?.let {
-                postDao.updatePost(it.copy(commentCount = it.commentCount + 1))
-            }
+        val post = postDao.getPostById(postId).firstOrNull()
+        post?.let {
+            postDao.updatePost(it.copy(commentCount = it.commentCount + 1))
         }
 
         return comment
@@ -83,10 +83,9 @@ class PostRepository(
         commentDao.deleteComment(comment)
 
         // Mettre à jour le nombre de commentaires
-        postDao.getPostById(comment.postId).collect { post ->
-            post?.let {
-                postDao.updatePost(it.copy(commentCount = (it.commentCount - 1).coerceAtLeast(0)))
-            }
+        val post = postDao.getPostById(comment.postId).firstOrNull()
+        post?.let {
+            postDao.updatePost(it.copy(commentCount = (it.commentCount - 1).coerceAtLeast(0)))
         }
     }
 }

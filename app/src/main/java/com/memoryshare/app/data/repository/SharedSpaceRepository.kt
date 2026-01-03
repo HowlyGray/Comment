@@ -6,6 +6,7 @@ import com.memoryshare.app.data.model.Media
 import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.SharedSpace
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
 class SharedSpaceRepository(
@@ -65,39 +66,36 @@ class SharedSpaceRepository(
         mediaDao.insertMedia(media)
 
         // Mettre à jour le nombre de médias et la dernière activité de l'espace
-        sharedSpaceDao.getSharedSpaceById(spaceId).collect { space ->
-            space?.let {
-                sharedSpaceDao.updateSharedSpace(
-                    it.copy(
-                        mediaCount = it.mediaCount + 1,
-                        lastActivityAt = System.currentTimeMillis()
-                    )
+        val space = sharedSpaceDao.getSharedSpaceById(spaceId).firstOrNull()
+        space?.let {
+            sharedSpaceDao.updateSharedSpace(
+                it.copy(
+                    mediaCount = it.mediaCount + 1,
+                    lastActivityAt = System.currentTimeMillis()
                 )
-            }
+            )
         }
 
         return media
     }
 
     suspend fun addMemberToSpace(spaceId: String, userId: String) {
-        sharedSpaceDao.getSharedSpaceById(spaceId).collect { space ->
-            space?.let {
-                if (!it.memberIds.contains(userId)) {
-                    sharedSpaceDao.updateSharedSpace(
-                        it.copy(memberIds = it.memberIds + userId)
-                    )
-                }
+        val space = sharedSpaceDao.getSharedSpaceById(spaceId).firstOrNull()
+        space?.let {
+            if (!it.memberIds.contains(userId)) {
+                sharedSpaceDao.updateSharedSpace(
+                    it.copy(memberIds = it.memberIds + userId)
+                )
             }
         }
     }
 
     suspend fun removeMemberFromSpace(spaceId: String, userId: String) {
-        sharedSpaceDao.getSharedSpaceById(spaceId).collect { space ->
-            space?.let {
-                sharedSpaceDao.updateSharedSpace(
-                    it.copy(memberIds = it.memberIds.filter { id -> id != userId })
-                )
-            }
+        val space = sharedSpaceDao.getSharedSpaceById(spaceId).firstOrNull()
+        space?.let {
+            sharedSpaceDao.updateSharedSpace(
+                it.copy(memberIds = it.memberIds.filter { id -> id != userId })
+            )
         }
     }
 
@@ -105,12 +103,11 @@ class SharedSpaceRepository(
         mediaDao.deleteMedia(media)
 
         // Mettre à jour le nombre de médias de l'espace
-        sharedSpaceDao.getSharedSpaceById(media.spaceId).collect { space ->
-            space?.let {
-                sharedSpaceDao.updateSharedSpace(
-                    it.copy(mediaCount = (it.mediaCount - 1).coerceAtLeast(0))
-                )
-            }
+        val space = sharedSpaceDao.getSharedSpaceById(media.spaceId).firstOrNull()
+        space?.let {
+            sharedSpaceDao.updateSharedSpace(
+                it.copy(mediaCount = (it.mediaCount - 1).coerceAtLeast(0))
+            )
         }
     }
 
