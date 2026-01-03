@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,16 +32,37 @@ fun MemoriesScreen(
     onSpaceClick: (String) -> Unit,
     onNavigateToMessages: () -> Unit,
     onNavigateToFeed: () -> Unit,
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val spaces by viewModel.spaces.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showOptionsMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Espaces partagés", fontWeight = FontWeight.Bold) }
+                title = { Text("Espaces partagés", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { showOptionsMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                    }
+
+                    DropdownMenu(
+                        expanded = showOptionsMenu,
+                        onDismissRequest = { showOptionsMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Paramètres") },
+                            onClick = {
+                                showOptionsMenu = false
+                                onNavigateToSettings()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                        )
+                    }
+                }
             )
         },
         bottomBar = {

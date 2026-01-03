@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,15 +33,36 @@ fun FeedScreen(
     onPostClick: (String) -> Unit,
     onNavigateToMessages: () -> Unit,
     onNavigateToMemories: () -> Unit,
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val posts by viewModel.posts.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
+    var showOptionsMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Fil d'actualité", fontWeight = FontWeight.Bold) }
+                title = { Text("Fil d'actualité", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { showOptionsMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                    }
+
+                    DropdownMenu(
+                        expanded = showOptionsMenu,
+                        onDismissRequest = { showOptionsMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Paramètres") },
+                            onClick = {
+                                showOptionsMenu = false
+                                onNavigateToSettings()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                        )
+                    }
+                }
             )
         },
         bottomBar = {

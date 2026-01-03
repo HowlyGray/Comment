@@ -79,6 +79,9 @@ fun AppNavigation(
                 },
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -176,6 +179,9 @@ fun AppNavigation(
                 },
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -209,6 +215,9 @@ fun AppNavigation(
                 },
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -229,7 +238,6 @@ fun AppNavigation(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 viewModel = userViewModel,
-                preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onNavigateToMessages = {
                     navController.navigate(Screen.Messages.route)
@@ -240,12 +248,25 @@ fun AppNavigation(
                 onNavigateToMemories = {
                     navController.navigate(Screen.Memories.route)
                 },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                preferencesViewModel = preferencesViewModel,
+                onNavigateToProfile = {
+                    navController.navigate(Screen.Profile.route)
+                },
                 onLogout = {
                     userViewModel.setCurrentUser(null)
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
     }

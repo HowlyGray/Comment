@@ -1,7 +1,8 @@
 package com.memoryshare.app.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
@@ -21,23 +23,41 @@ import com.memoryshare.app.ui.viewmodel.UserViewModel
 @Composable
 fun ProfileScreen(
     viewModel: UserViewModel,
-    preferencesViewModel: com.memoryshare.app.ui.viewmodel.PreferencesViewModel,
     currentUser: User?,
     onNavigateToMessages: () -> Unit,
     onNavigateToFeed: () -> Unit,
     onNavigateToMemories: () -> Unit,
-    onLogout: () -> Unit
+    onNavigateToSettings: () -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
-    val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
+    var showOptionsMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profil", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = currentUser?.username ?: "username",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 actions = {
-                    IconButton(onClick = { showEditDialog = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Modifier le profil")
+                    IconButton(onClick = { showOptionsMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                    }
+
+                    DropdownMenu(
+                        expanded = showOptionsMenu,
+                        onDismissRequest = { showOptionsMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Paramètres") },
+                            onClick = {
+                                showOptionsMenu = false
+                                onNavigateToSettings()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                        )
                     }
                 }
             )
@@ -58,124 +78,135 @@ fun ProfileScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // En-tête du profil
-            Column(
+            // En-tête du profil - style Instagram
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Photo de profil
                 UserAvatar(
                     user = currentUser,
-                    size = 100.dp
+                    size = 88.dp
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = currentUser?.displayName ?: "Utilisateur",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "@${currentUser?.username ?: "username"}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                if (currentUser?.bio != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = currentUser.bio,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Statistiques
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ProfileStat(
+                        count = "0",
+                        label = "Publications"
+                    )
+                    ProfileStat(
+                        count = "0",
+                        label = "Abonnés"
+                    )
+                    ProfileStat(
+                        count = "0",
+                        label = "Abonnements"
                     )
                 }
             }
 
-            Divider()
-
-            // Options du profil
+            // Nom et bio
             Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(
+                    text = currentUser?.displayName ?: "Nom d'affichage",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                if (currentUser?.bio != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = currentUser.bio,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Boutons d'action - style Instagram
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Modifier le profil")
+                }
+
+                OutlinedButton(
+                    onClick = { /* Partager le profil */ },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Partager le profil")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Tabs - Publications (pour l'instant juste l'onglet grille)
+            TabRow(
+                selectedTabIndex = 0,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                ProfileMenuItem(
-                    icon = Icons.Default.Email,
-                    title = "Email",
-                    subtitle = currentUser?.email ?: "",
-                    onClick = {}
-                )
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Settings,
-                    title = "Paramètres",
-                    onClick = {}
-                )
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Notifications",
-                    onClick = {}
-                )
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Lock,
-                    title = "Confidentialité",
-                    onClick = {}
-                )
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Help,
-                    title = "Aide",
-                    onClick = {}
-                )
-
-                Divider()
-
-                // Section Accessibilité
-                Text(
-                    text = "Accessibilité",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
-
-                ListItem(
-                    headlineContent = {
-                        Text("Boutons pour gauchers")
-                    },
-                    supportingContent = {
-                        Text(
-                            text = "Placer les boutons d'action à gauche",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    leadingContent = {
+                Tab(
+                    selected = true,
+                    onClick = { },
+                    icon = {
                         Icon(
-                            imageVector = Icons.Default.Accessible,
-                            contentDescription = "Accessibilité"
-                        )
-                    },
-                    trailingContent = {
-                        Switch(
-                            checked = fabOnLeft,
-                            onCheckedChange = { preferencesViewModel.setFabOnLeft(it) }
+                            imageVector = Icons.Default.GridOn,
+                            contentDescription = "Publications"
                         )
                     }
                 )
+            }
 
-                Divider()
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Logout,
-                    title = "Se déconnecter",
-                    onClick = onLogout,
-                    textColor = MaterialTheme.colorScheme.error
-                )
+            // Grille de publications (vide pour l'instant)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Aucune publication",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Partagez des photos et des vidéos",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -199,46 +230,24 @@ fun ProfileScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileMenuItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String? = null,
-    onClick: () -> Unit,
-    textColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
+fun ProfileStat(
+    count: String,
+    label: String
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = title,
-                color = textColor
-            )
-        },
-        supportingContent = subtitle?.let {
-            {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = textColor
-            )
-        },
-        trailingContent = {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        modifier = Modifier.clickable(onClick = onClick)
-    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = count,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
