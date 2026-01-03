@@ -50,69 +50,66 @@ fun FeedScreen(
                 onNavigateToMemories = onNavigateToMemories,
                 onNavigateToProfile = onNavigateToProfile
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Créer nouvelle publication */ },
-                modifier = if (fabOnLeft) {
-                    Modifier.padding(start = 16.dp)
-                } else {
-                    Modifier
-                }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
-            }
-        },
-        floatingActionButtonPosition = if (fabOnLeft) {
-            FabPosition.Start
-        } else {
-            FabPosition.End
         }
     ) { paddingValues ->
-        if (posts.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoLibrary,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Aucune publication",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Partagez vos premiers souvenirs",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Contenu principal
+            if (posts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Aucune publication",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Partagez vos premiers souvenirs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    items(posts) { post ->
+                        PostItem(
+                            post = post,
+                            currentUser = currentUser,
+                            onLikeClick = { viewModel.toggleLike(post) },
+                            onCommentClick = { onPostClick(post.id) },
+                            onPostClick = { onPostClick(post.id) }
+                        )
+                        Divider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+                    }
                 }
             }
-        } else {
-            LazyColumn(
+
+            // FAB positionné manuellement
+            FloatingActionButton(
+                onClick = { /* Créer nouvelle publication */ },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                    .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .padding(bottom = 80.dp) // Padding supplémentaire pour éviter la barre de navigation
             ) {
-                items(posts) { post ->
-                    PostItem(
-                        post = post,
-                        currentUser = currentUser,
-                        onLikeClick = { viewModel.toggleLike(post) },
-                        onCommentClick = { onPostClick(post.id) },
-                        onPostClick = { onPostClick(post.id) }
-                    )
-                    Divider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
-                }
+                Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
             }
         }
     }

@@ -52,67 +52,64 @@ fun MessagesScreen(
                 onNavigateToMemories = onNavigateToMemories,
                 onNavigateToProfile = onNavigateToProfile
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNewConversation,
-                modifier = if (fabOnLeft) {
-                    Modifier.padding(start = 16.dp)
-                } else {
-                    Modifier
-                }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
-            }
-        },
-        floatingActionButtonPosition = if (fabOnLeft) {
-            FabPosition.Start
-        } else {
-            FabPosition.End
         }
     ) { paddingValues ->
-        if (conversations.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Aucune conversation",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Commencez une nouvelle conversation",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Contenu principal
+            if (conversations.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Aucune conversation",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Commencez une nouvelle conversation",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    items(conversations) { conversation ->
+                        val displayName = getConversationDisplayName(conversation, currentUser, allUsers)
+                        val otherUser = if (!conversation.isGroup && conversation.participantIds.size == 2) {
+                            val otherUserId = conversation.participantIds.find { it != currentUser?.id }
+                            allUsers.find { it.id == otherUserId }
+                        } else null
+
+                        ConversationItem(
+                            conversation = conversation,
+                            displayName = displayName,
+                            otherUser = otherUser,
+                            onClick = { onConversationClick(conversation.id) }
+                        )
+                        Divider()
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                items(conversations) { conversation ->
-                    val displayName = getConversationDisplayName(conversation, currentUser, allUsers)
-                    val otherUser = if (!conversation.isGroup && conversation.participantIds.size == 2) {
-                        val otherUserId = conversation.participantIds.find { it != currentUser?.id }
-                        allUsers.find { it.id == otherUserId }
-                    } else null
 
-                    ConversationItem(
-                        conversation = conversation,
-                        displayName = displayName,
-                        otherUser = otherUser,
-                        onClick = { onConversationClick(conversation.id) }
-                    )
-                    Divider()
-                }
+            // FAB positionné manuellement
+            FloatingActionButton(
+                onClick = onNewConversation,
+                modifier = Modifier
+                    .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .padding(bottom = 80.dp) // Padding supplémentaire pour éviter la barre de navigation
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
             }
         }
     }

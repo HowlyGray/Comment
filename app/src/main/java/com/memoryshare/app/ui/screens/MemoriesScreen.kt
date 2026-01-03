@@ -50,69 +50,66 @@ fun MemoriesScreen(
                 onNavigateToMemories = {},
                 onNavigateToProfile = onNavigateToProfile
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true },
-                modifier = if (fabOnLeft) {
-                    Modifier.padding(start = 16.dp)
-                } else {
-                    Modifier
-                }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nouvel espace")
-            }
-        },
-        floatingActionButtonPosition = if (fabOnLeft) {
-            FabPosition.Start
-        } else {
-            FabPosition.End
         }
     ) { paddingValues ->
-        if (spaces.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoLibrary,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Aucun espace partagé",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Créez un espace pour partager vos souvenirs",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Contenu principal
+            if (spaces.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Aucun espace partagé",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Créez un espace pour partager vos souvenirs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(spaces) { space ->
+                        SpaceCard(
+                            space = space,
+                            onClick = { onSpaceClick(space.id) }
+                        )
+                    }
                 }
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+
+            // FAB positionné manuellement
+            FloatingActionButton(
+                onClick = { showCreateDialog = true },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .padding(bottom = 80.dp) // Padding supplémentaire pour éviter la barre de navigation
             ) {
-                items(spaces) { space ->
-                    SpaceCard(
-                        space = space,
-                        onClick = { onSpaceClick(space.id) }
-                    )
-                }
+                Icon(Icons.Default.Add, contentDescription = "Nouvel espace")
             }
         }
     }
