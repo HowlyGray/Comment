@@ -25,6 +25,7 @@ import java.util.*
 @Composable
 fun MessagesScreen(
     viewModel: MessageViewModel,
+    userViewModel: com.memoryshare.app.ui.viewmodel.UserViewModel,
     currentUser: User?,
     onConversationClick: (String) -> Unit,
     onNewConversation: () -> Unit,
@@ -33,6 +34,7 @@ fun MessagesScreen(
     onNavigateToProfile: () -> Unit
 ) {
     val conversations by viewModel.conversations.collectAsState()
+    val allUsers by userViewModel.users.collectAsState()
 
     Scaffold(
         topBar = {
@@ -83,8 +85,16 @@ fun MessagesScreen(
                     .padding(paddingValues)
             ) {
                 items(conversations) { conversation ->
+                    val displayName = getConversationDisplayName(conversation, currentUser, allUsers)
+                    val otherUser = if (!conversation.isGroup && conversation.participantIds.size == 2) {
+                        val otherUserId = conversation.participantIds.find { it != currentUser?.id }
+                        allUsers.find { it.id == otherUserId }
+                    } else null
+
                     ConversationItem(
                         conversation = conversation,
+                        displayName = displayName,
+                        otherUser = otherUser,
                         onClick = { onConversationClick(conversation.id) }
                     )
                     Divider()
@@ -94,9 +104,22 @@ fun MessagesScreen(
     }
 }
 
+fun getConversationDisplayName(conversation: Conversation, currentUser: User?, allUsers: List<User>): String {
+    return if (conversation.isGroup || conversation.name != null) {
+        conversation.name ?: "Groupe"
+    } else {
+        // Conversation 1-to-1: trouver l'autre utilisateur
+        val otherUserId = conversation.participantIds.find { it != currentUser?.id }
+        val otherUser = allUsers.find { it.id == otherUserId }
+        otherUser?.displayName ?: "Contact"
+    }
+}
+
 @Composable
 fun ConversationItem(
     conversation: Conversation,
+    displayName: String,
+    otherUser: User?,
     onClick: () -> Unit
 ) {
     Row(
@@ -107,7 +130,7 @@ fun ConversationItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserAvatar(
-            user = null, // À remplacer par l'utilisateur réel
+            user = otherUser,
             size = 56.dp
         )
 
@@ -117,7 +140,7 @@ fun ConversationItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = conversation.name ?: "Conversation",
+                text = displayName,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,

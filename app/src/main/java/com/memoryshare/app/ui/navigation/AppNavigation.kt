@@ -49,6 +49,7 @@ fun AppNavigation(
         composable(Screen.Messages.route) {
             MessagesScreen(
                 viewModel = messageViewModel,
+                userViewModel = userViewModel,
                 currentUser = currentUser,
                 onConversationClick = { conversationId ->
                     navController.navigate(Screen.MessageDetail.createRoute(conversationId))
@@ -131,6 +132,7 @@ fun AppNavigation(
             MessageDetailScreen(
                 conversationId = conversationId,
                 viewModel = messageViewModel,
+                userViewModel = userViewModel,
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() }
             )

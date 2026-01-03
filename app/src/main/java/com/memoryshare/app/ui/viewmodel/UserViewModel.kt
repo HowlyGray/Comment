@@ -67,6 +67,19 @@ class UserViewModel(
         }
     }
 
+    fun addContact(
+        username: String,
+        displayName: String,
+        email: String,
+        profilePictureUrl: String? = null,
+        bio: String? = null
+    ) {
+        viewModelScope.launch {
+            repository.createUser(username, displayName, email, profilePictureUrl, bio)
+            // Ne pas mettre à jour currentUser
+        }
+    }
+
     fun updateUser(user: User) {
         viewModelScope.launch {
             repository.updateUser(user)

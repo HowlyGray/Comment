@@ -121,7 +121,7 @@ fun AddContactScreen(
                 onClick = {
                     if (username.isNotBlank() && displayName.isNotBlank() && email.isNotBlank()) {
                         isLoading = true
-                        userViewModel.createUser(
+                        userViewModel.addContact(
                             username = username,
                             displayName = displayName,
                             email = email,
