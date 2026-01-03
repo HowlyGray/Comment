@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.memoryshare.app.data.local.AppDatabase
+import com.memoryshare.app.data.local.PreferencesManager
 import com.memoryshare.app.data.repository.MessageRepository
 import com.memoryshare.app.data.repository.PostRepository
 import com.memoryshare.app.data.repository.SharedSpaceRepository
@@ -30,6 +31,9 @@ class MainActivity : ComponentActivity() {
 
         // Initialiser la base de données
         val database = AppDatabase.getDatabase(applicationContext)
+
+        // Initialiser le gestionnaire de préférences
+        val preferencesManager = PreferencesManager(applicationContext)
 
         // Initialiser les repositories
         val userRepository = UserRepository(database.userDao())
@@ -56,7 +60,8 @@ class MainActivity : ComponentActivity() {
                         userRepository = userRepository,
                         messageRepository = messageRepository,
                         postRepository = postRepository,
-                        spaceRepository = spaceRepository
+                        spaceRepository = spaceRepository,
+                        preferencesManager = preferencesManager
                     )
                 }
             }
@@ -69,13 +74,14 @@ fun MemoryShareApp(
     userRepository: UserRepository,
     messageRepository: MessageRepository,
     postRepository: PostRepository,
-    spaceRepository: SharedSpaceRepository
+    spaceRepository: SharedSpaceRepository,
+    preferencesManager: PreferencesManager
 ) {
     val navController = rememberNavController()
 
     // Créer les ViewModels
     val userViewModel = viewModel<UserViewModel>(
-        factory = ViewModelFactory(userRepository)
+        factory = ViewModelFactory(userRepository, preferencesManager)
     )
     val messageViewModel = viewModel<MessageViewModel>(
         factory = ViewModelFactory(messageRepository)
