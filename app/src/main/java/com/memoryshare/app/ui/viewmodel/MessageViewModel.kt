@@ -6,6 +6,7 @@ import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.repository.MessageRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +25,9 @@ class MessageViewModel(
     private val _currentConversation = MutableStateFlow<Conversation?>(null)
     val currentConversation: StateFlow<Conversation?> = _currentConversation.asStateFlow()
 
+    private var loadConversationJob: Job? = null
+    private var loadMessagesJob: Job? = null
+
     init {
         loadConversations()
     }
@@ -37,7 +41,9 @@ class MessageViewModel(
     }
 
     fun loadConversation(conversationId: String) {
-        viewModelScope.launch {
+        // Annuler la collection précédente
+        loadConversationJob?.cancel()
+        loadConversationJob = viewModelScope.launch {
             repository.getConversationById(conversationId).collect { conversation ->
                 _currentConversation.value = conversation
             }
@@ -45,7 +51,9 @@ class MessageViewModel(
     }
 
     fun loadMessages(conversationId: String) {
-        viewModelScope.launch {
+        // Annuler la collection précédente
+        loadMessagesJob?.cancel()
+        loadMessagesJob = viewModelScope.launch {
             repository.getMessagesByConversation(conversationId).collect { messages ->
                 _currentMessages.value = messages
             }
@@ -62,6 +70,14 @@ class MessageViewModel(
         viewModelScope.launch {
             repository.sendMessage(conversationId, senderId, content, type, mediaUrl)
         }
+    }
+
+    suspend fun findOrCreateConversation(
+        participantIds: List<String>,
+        name: String? = null,
+        isGroup: Boolean = false
+    ): Conversation {
+        return repository.findOrCreateConversation(participantIds, name, isGroup)
     }
 
     fun createConversation(participantIds: List<String>, name: String? = null, isGroup: Boolean = false) {

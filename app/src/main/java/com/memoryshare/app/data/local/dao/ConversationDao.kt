@@ -12,6 +12,9 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE id = :conversationId")
     fun getConversationById(conversationId: String): Flow<Conversation?>
 
+    @Query("SELECT * FROM conversations")
+    suspend fun getAllConversationsSync(): List<Conversation>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversation(conversation: Conversation)
 

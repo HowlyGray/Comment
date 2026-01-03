@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -14,6 +15,7 @@ import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation(
@@ -24,6 +26,7 @@ fun AppNavigation(
     spaceViewModel: SharedSpaceViewModel
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     // Toujours démarrer sur Login, puis naviguer automatiquement si un utilisateur est restauré
     LaunchedEffect(currentUser) {
@@ -82,15 +85,19 @@ fun AppNavigation(
                 userViewModel = userViewModel,
                 currentUser = currentUser,
                 onContactSelected = { selectedUser ->
-                    // Créer une conversation avec le contact sélectionné
+                    // Trouver ou créer une conversation avec le contact sélectionné
                     currentUser?.let { user ->
-                        messageViewModel.createConversation(
-                            participantIds = listOf(user.id, selectedUser.id),
-                            name = null,
-                            isGroup = false
-                        )
+                        coroutineScope.launch {
+                            val conversation = messageViewModel.findOrCreateConversation(
+                                participantIds = listOf(user.id, selectedUser.id),
+                                name = null,
+                                isGroup = false
+                            )
+                            navController.navigate(Screen.MessageDetail.createRoute(conversation.id)) {
+                                popUpTo(Screen.Messages.route) { inclusive = false }
+                            }
+                        }
                     }
-                    navController.popBackStack()
                 },
                 onCreateGroup = {
                     navController.navigate(Screen.CreateGroup.route)
@@ -109,14 +116,18 @@ fun AppNavigation(
                 onCreateGroup = { selectedUsers, groupName ->
                     // Créer un groupe avec les utilisateurs sélectionnés
                     currentUser?.let { user ->
-                        val participantIds = selectedUsers.map { it.id } + user.id
-                        messageViewModel.createConversation(
-                            participantIds = participantIds,
-                            name = groupName,
-                            isGroup = true
-                        )
+                        coroutineScope.launch {
+                            val participantIds = selectedUsers.map { it.id } + user.id
+                            val conversation = messageViewModel.findOrCreateConversation(
+                                participantIds = participantIds,
+                                name = groupName,
+                                isGroup = true
+                            )
+                            navController.navigate(Screen.MessageDetail.createRoute(conversation.id)) {
+                                popUpTo(Screen.Messages.route) { inclusive = false }
+                            }
+                        }
                     }
-                    navController.popBackStack(Screen.Messages.route, inclusive = false)
                 },
                 onBack = { navController.popBackStack() }
             )

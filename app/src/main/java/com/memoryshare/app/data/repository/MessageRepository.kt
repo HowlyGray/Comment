@@ -22,11 +22,25 @@ class MessageRepository(
     fun getMessagesByConversation(conversationId: String): Flow<List<Message>> =
         messageDao.getMessagesByConversation(conversationId)
 
-    suspend fun createConversation(
+    suspend fun findOrCreateConversation(
         participantIds: List<String>,
         name: String? = null,
         isGroup: Boolean = false
     ): Conversation {
+        // Vérifier si une conversation existe déjà avec les mêmes participants
+        if (!isGroup && participantIds.size == 2) {
+            val existingConversations = conversationDao.getAllConversationsSync()
+            val existingConversation = existingConversations.find { conv ->
+                !conv.isGroup &&
+                conv.participantIds.size == 2 &&
+                conv.participantIds.containsAll(participantIds)
+            }
+            if (existingConversation != null) {
+                return existingConversation
+            }
+        }
+
+        // Sinon, créer une nouvelle conversation
         val conversation = Conversation(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -35,6 +49,14 @@ class MessageRepository(
         )
         conversationDao.insertConversation(conversation)
         return conversation
+    }
+
+    suspend fun createConversation(
+        participantIds: List<String>,
+        name: String? = null,
+        isGroup: Boolean = false
+    ): Conversation {
+        return findOrCreateConversation(participantIds, name, isGroup)
     }
 
     suspend fun sendMessage(
