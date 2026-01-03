@@ -10,6 +10,7 @@ sealed class Screen(val route: String) {
         fun createRoute(conversationId: String) = "messages/$conversationId"
     }
     object Feed : Screen("feed")
+    object CreatePost : Screen("create_post")
     object PostDetail : Screen("feed/{postId}") {
         fun createRoute(postId: String) = "feed/$postId"
     }

@@ -28,15 +28,18 @@ import java.util.*
 @Composable
 fun FeedScreen(
     viewModel: PostViewModel,
+    userViewModel: com.memoryshare.app.ui.viewmodel.UserViewModel,
     preferencesViewModel: com.memoryshare.app.ui.viewmodel.PreferencesViewModel,
     currentUser: User?,
     onPostClick: (String) -> Unit,
+    onCreatePost: () -> Unit,
     onNavigateToMessages: () -> Unit,
     onNavigateToMemories: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val posts by viewModel.posts.collectAsState()
+    val allUsers by userViewModel.users.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
 
@@ -112,8 +115,10 @@ fun FeedScreen(
                         .padding(paddingValues)
                 ) {
                     items(posts) { post ->
+                        val author = allUsers.find { it.id == post.authorId }
                         PostItem(
                             post = post,
+                            author = author,
                             currentUser = currentUser,
                             onLikeClick = { viewModel.toggleLike(post) },
                             onCommentClick = { onPostClick(post.id) },
@@ -126,7 +131,7 @@ fun FeedScreen(
 
             // FAB positionné manuellement
             FloatingActionButton(
-                onClick = { /* Créer nouvelle publication */ },
+                onClick = onCreatePost,
                 modifier = Modifier
                     .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
                     .padding(16.dp)
@@ -141,6 +146,7 @@ fun FeedScreen(
 @Composable
 fun PostItem(
     post: Post,
+    author: User?,
     currentUser: User?,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
@@ -158,13 +164,13 @@ fun PostItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserAvatar(user = null, size = 40.dp)
+            UserAvatar(user = author, size = 40.dp)
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Utilisateur",
+                    text = author?.username ?: "Utilisateur",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -232,7 +238,7 @@ fun PostItem(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = "Utilisateur ",
+                    text = "${author?.username ?: "Utilisateur"} ",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )

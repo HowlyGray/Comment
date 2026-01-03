@@ -166,10 +166,14 @@ fun AppNavigation(
         composable(Screen.Feed.route) {
             FeedScreen(
                 viewModel = postViewModel,
+                userViewModel = userViewModel,
                 preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onPostClick = { postId ->
                     navController.navigate(Screen.PostDetail.createRoute(postId))
+                },
+                onCreatePost = {
+                    navController.navigate(Screen.CreatePost.route)
                 },
                 onNavigateToMessages = {
                     navController.navigate(Screen.Messages.route)
@@ -182,6 +186,17 @@ fun AppNavigation(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                }
+            )
+        }
+
+        composable(Screen.CreatePost.route) {
+            CreatePostScreen(
+                viewModel = postViewModel,
+                currentUser = currentUser,
+                onBack = { navController.popBackStack() },
+                onPostCreated = {
+                    navController.popBackStack()
                 }
             )
         }
