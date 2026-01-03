@@ -24,6 +24,16 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
+    val currentUser by userViewModel.currentUser.collectAsState()
+
+    // Observer les changements de currentUser pour détecter la création réussie
+    LaunchedEffect(currentUser) {
+        if (currentUser != null && isLoading) {
+            isLoading = false
+            onLoginSuccess(currentUser!!)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -108,14 +118,7 @@ fun LoginScreen(
                             displayName = displayName,
                             email = email
                         )
-                        // Simuler une connexion réussie
-                        val user = User(
-                            id = java.util.UUID.randomUUID().toString(),
-                            username = username,
-                            displayName = displayName,
-                            email = email
-                        )
-                        onLoginSuccess(user)
+                        // Le LaunchedEffect appellera onLoginSuccess quand currentUser sera mis à jour
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

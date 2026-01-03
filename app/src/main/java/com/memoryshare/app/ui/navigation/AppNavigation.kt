@@ -1,6 +1,7 @@
 package com.memoryshare.app.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
@@ -24,15 +25,22 @@ fun AppNavigation(
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
 
-    val startDestination = if (currentUser != null) {
-        Screen.Messages.route
-    } else {
-        Screen.Login.route
+    // Toujours démarrer sur Login, puis naviguer automatiquement si un utilisateur est restauré
+    LaunchedEffect(currentUser) {
+        if (currentUser != null) {
+            // Naviguer vers Messages si un utilisateur est restauré et qu'on est sur Login
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            if (currentRoute == Screen.Login.route) {
+                navController.navigate(Screen.Messages.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            }
+        }
     }
 
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Login.route
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
