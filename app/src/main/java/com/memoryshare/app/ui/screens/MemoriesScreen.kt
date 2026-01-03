@@ -107,7 +107,7 @@ fun MemoriesScreen(
                 modifier = Modifier
                     .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
                     .padding(16.dp)
-                    .padding(bottom = 80.dp) // Padding supplémentaire pour éviter la barre de navigation
+                    .padding(bottom = 96.dp) // Padding supplémentaire pour éviter la barre de navigation
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Nouvel espace")
             }
