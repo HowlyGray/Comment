@@ -10,5 +10,7 @@ data class Comment(
     val postId: String,
     val authorId: String,
     val content: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val likeCount: Int = 0,
+    val likedByCurrentUser: Boolean = false
 )

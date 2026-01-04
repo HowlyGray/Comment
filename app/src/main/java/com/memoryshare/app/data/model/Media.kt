@@ -25,5 +25,8 @@ data class Media(
     val height: Int? = null,
     val fileSize: Long? = null, // En octets
     val createdAt: Long = System.currentTimeMillis(),
-    val capturedAt: Long? = null // Date de capture si disponible
+    val capturedAt: Long? = null, // Date de capture si disponible
+    val likeCount: Int = 0,
+    val commentCount: Int = 0,
+    val likedByCurrentUser: Boolean = false
 )

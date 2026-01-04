@@ -23,5 +23,7 @@ data class Message(
     val isRead: Boolean = false,
     val mediaUrl: String? = null,
     val mediaThumbnailUrl: String? = null,
-    val mediaDuration: Long? = null // Pour audio/vidéo en millisecondes
+    val mediaDuration: Long? = null, // Pour audio/vidéo en millisecondes
+    val replyToId: String? = null, // ID du message auquel on répond
+    val editedAt: Long? = null // Timestamp de la dernière édition
 )

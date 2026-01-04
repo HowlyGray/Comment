@@ -14,12 +14,15 @@ import com.memoryshare.app.data.model.*
         UserFollow::class,
         Conversation::class,
         Message::class,
+        MessageReaction::class,
         Post::class,
         SharedSpace::class,
         Media::class,
-        Comment::class
+        MediaComment::class,
+        Comment::class,
+        SharedSpacePermission::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -28,10 +31,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userFollowDao(): UserFollowDao
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
+    abstract fun messageReactionDao(): MessageReactionDao
     abstract fun postDao(): PostDao
     abstract fun sharedSpaceDao(): SharedSpaceDao
     abstract fun mediaDao(): MediaDao
+    abstract fun mediaCommentDao(): MediaCommentDao
     abstract fun commentDao(): CommentDao
+    abstract fun sharedSpacePermissionDao(): SharedSpacePermissionDao
 
     companion object {
         @Volatile

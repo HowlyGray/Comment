@@ -12,6 +12,12 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE id = :messageId")
     fun getMessageById(messageId: String): Flow<Message?>
 
+    @Query("SELECT * FROM messages WHERE id = :messageId")
+    suspend fun getMessageByIdSync(messageId: String): Message?
+
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId AND (senderId LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%')")
+    fun searchInConversation(conversationId: String, query: String): Flow<List<Message>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: Message)
 

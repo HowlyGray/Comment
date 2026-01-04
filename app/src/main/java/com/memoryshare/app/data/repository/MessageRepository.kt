@@ -2,8 +2,10 @@ package com.memoryshare.app.data.repository
 
 import com.memoryshare.app.data.local.dao.ConversationDao
 import com.memoryshare.app.data.local.dao.MessageDao
+import com.memoryshare.app.data.local.dao.MessageReactionDao
 import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.Message
+import com.memoryshare.app.data.model.MessageReaction
 import com.memoryshare.app.data.model.MessageType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -11,7 +13,8 @@ import java.util.UUID
 
 class MessageRepository(
     private val messageDao: MessageDao,
-    private val conversationDao: ConversationDao
+    private val conversationDao: ConversationDao,
+    private val messageReactionDao: MessageReactionDao
 ) {
 
     fun getAllConversations(): Flow<List<Conversation>> = conversationDao.getAllConversations()
@@ -97,5 +100,78 @@ class MessageRepository(
     suspend fun deleteConversation(conversation: Conversation) {
         messageDao.deleteMessagesByConversation(conversation.id)
         conversationDao.deleteConversation(conversation)
+    }
+
+    // Edit message
+    suspend fun editMessage(messageId: String, newContent: String) {
+        val message = messageDao.getMessageByIdSync(messageId)
+        message?.let {
+            val updatedMessage = it.copy(
+                content = newContent,
+                editedAt = System.currentTimeMillis()
+            )
+            messageDao.updateMessage(updatedMessage)
+        }
+    }
+
+    // Reply to message
+    suspend fun replyToMessage(
+        conversationId: String,
+        senderId: String,
+        content: String,
+        replyToId: String,
+        type: MessageType = MessageType.TEXT,
+        mediaUrl: String? = null
+    ): Message {
+        val message = Message(
+            id = UUID.randomUUID().toString(),
+            conversationId = conversationId,
+            senderId = senderId,
+            content = content,
+            type = type,
+            mediaUrl = mediaUrl,
+            replyToId = replyToId
+        )
+        messageDao.insertMessage(message)
+
+        // Mettre à jour la conversation
+        val conversation = conversationDao.getConversationById(conversationId).firstOrNull()
+        conversation?.let {
+            conversationDao.updateConversation(
+                it.copy(
+                    lastMessageText = content,
+                    lastMessageTime = message.timestamp
+                )
+            )
+        }
+
+        return message
+    }
+
+    fun getMessageByIdFlow(messageId: String): Flow<Message?> = messageDao.getMessageById(messageId)
+
+    suspend fun searchInConversation(conversationId: String, query: String): Flow<List<Message>> =
+        messageDao.searchInConversation(conversationId, query)
+
+    // Message reactions
+    fun getReactionsForMessage(messageId: String): Flow<List<MessageReaction>> =
+        messageReactionDao.getReactionsForMessage(messageId)
+
+    suspend fun addReaction(messageId: String, userId: String, emoji: String) {
+        // Supprimer l'ancienne réaction de l'utilisateur si elle existe
+        messageReactionDao.deleteUserReaction(messageId, userId)
+
+        // Ajouter la nouvelle réaction
+        val reaction = MessageReaction(
+            id = UUID.randomUUID().toString(),
+            messageId = messageId,
+            userId = userId,
+            emoji = emoji
+        )
+        messageReactionDao.insertReaction(reaction)
+    }
+
+    suspend fun removeReaction(messageId: String, userId: String) {
+        messageReactionDao.deleteUserReaction(messageId, userId)
     }
 }
