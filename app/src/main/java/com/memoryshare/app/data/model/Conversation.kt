@@ -13,5 +13,6 @@ data class Conversation(
     val lastMessageText: String? = null,
     val lastMessageTime: Long? = null,
     val imageUrl: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val archived: Boolean = false
 )

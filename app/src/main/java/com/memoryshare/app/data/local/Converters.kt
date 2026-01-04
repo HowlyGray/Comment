@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.model.PostMediaType
+import com.memoryshare.app.data.model.PermissionLevel
 
 class Converters {
     @TypeConverter
@@ -44,5 +45,15 @@ class Converters {
     @TypeConverter
     fun toPostMediaType(value: String): PostMediaType {
         return PostMediaType.valueOf(value)
+    }
+
+    @TypeConverter
+    fun fromPermissionLevel(value: PermissionLevel): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun toPermissionLevel(value: String): PermissionLevel {
+        return PermissionLevel.valueOf(value)
     }
 }

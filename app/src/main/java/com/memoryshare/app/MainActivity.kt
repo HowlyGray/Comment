@@ -43,7 +43,8 @@ class MainActivity : ComponentActivity() {
         )
         val messageRepository = MessageRepository(
             database.messageDao(),
-            database.conversationDao()
+            database.conversationDao(),
+            database.messageReactionDao()
         )
         val postRepository = PostRepository(
             database.postDao(),
