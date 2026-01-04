@@ -163,17 +163,17 @@ fun FeedScreen(
                         }
                     }
                 }
-            }
 
-            // FAB positionné manuellement
-            FloatingActionButton(
-                onClick = onCreatePost,
-                modifier = Modifier
-                    .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .padding(bottom = 96.dp) // Padding supplémentaire pour éviter la barre de navigation
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
+                // FAB positionné manuellement
+                FloatingActionButton(
+                    onClick = onCreatePost,
+                    modifier = Modifier
+                        .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .padding(bottom = 96.dp) // Padding supplémentaire pour éviter la barre de navigation
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
+                }
             }
         }
     }
