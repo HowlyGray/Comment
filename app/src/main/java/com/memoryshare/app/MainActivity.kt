@@ -37,7 +37,10 @@ class MainActivity : ComponentActivity() {
         val preferencesManager = PreferencesManager(applicationContext)
 
         // Initialiser les repositories
-        val userRepository = UserRepository(database.userDao())
+        val userRepository = UserRepository(
+            database.userDao(),
+            database.userFollowDao()
+        )
         val messageRepository = MessageRepository(
             database.messageDao(),
             database.conversationDao()

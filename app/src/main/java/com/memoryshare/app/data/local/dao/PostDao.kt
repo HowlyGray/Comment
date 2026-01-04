@@ -15,6 +15,14 @@ interface PostDao {
     @Query("SELECT * FROM posts WHERE id = :postId")
     fun getPostById(postId: String): Flow<Post?>
 
+    @Query("""
+        SELECT posts.* FROM posts
+        INNER JOIN user_follows ON posts.authorId = user_follows.followingId
+        WHERE user_follows.followerId = :userId
+        ORDER BY posts.timestamp DESC
+    """)
+    fun getFollowingPosts(userId: String): Flow<List<Post>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPost(post: Post)
 

@@ -1,11 +1,16 @@
 package com.memoryshare.app.data.repository
 
 import com.memoryshare.app.data.local.dao.UserDao
+import com.memoryshare.app.data.local.dao.UserFollowDao
 import com.memoryshare.app.data.model.User
+import com.memoryshare.app.data.model.UserFollow
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
-class UserRepository(private val userDao: UserDao) {
+class UserRepository(
+    private val userDao: UserDao,
+    private val userFollowDao: UserFollowDao
+) {
 
     fun getAllUsers(): Flow<List<User>> = userDao.getAllUsers()
 
@@ -40,5 +45,34 @@ class UserRepository(private val userDao: UserDao) {
 
     suspend fun deleteUser(user: User) {
         userDao.deleteUser(user)
+    }
+
+    // Follow/Unfollow methods
+    fun getFollowing(userId: String): Flow<List<UserFollow>> =
+        userFollowDao.getFollowing(userId)
+
+    fun getFollowers(userId: String): Flow<List<UserFollow>> =
+        userFollowDao.getFollowers(userId)
+
+    fun getFollowingCount(userId: String): Flow<Int> =
+        userFollowDao.getFollowingCount(userId)
+
+    fun getFollowersCount(userId: String): Flow<Int> =
+        userFollowDao.getFollowersCount(userId)
+
+    fun isFollowing(followerId: String, followingId: String): Flow<Boolean> =
+        userFollowDao.isFollowing(followerId, followingId)
+
+    suspend fun followUser(followerId: String, followingId: String) {
+        val userFollow = UserFollow(
+            id = UUID.randomUUID().toString(),
+            followerId = followerId,
+            followingId = followingId
+        )
+        userFollowDao.insertFollow(userFollow)
+    }
+
+    suspend fun unfollowUser(followerId: String, followingId: String) {
+        userFollowDao.deleteFollow(followerId, followingId)
     }
 }

@@ -25,6 +25,15 @@ class UserViewModel(
     private val _searchResults = MutableStateFlow<List<User>>(emptyList())
     val searchResults: StateFlow<List<User>> = _searchResults.asStateFlow()
 
+    private val _followersCount = MutableStateFlow(0)
+    val followersCount: StateFlow<Int> = _followersCount.asStateFlow()
+
+    private val _followingCount = MutableStateFlow(0)
+    val followingCount: StateFlow<Int> = _followingCount.asStateFlow()
+
+    private val _isFollowing = MutableStateFlow(false)
+    val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
+
     init {
         loadUsers()
         restoreCurrentUser()
@@ -101,6 +110,42 @@ class UserViewModel(
             repository.updateUser(user)
             if (_currentUser.value?.id == user.id) {
                 _currentUser.value = user
+            }
+        }
+    }
+
+    // Follow/Unfollow methods
+    fun loadFollowStats(userId: String) {
+        viewModelScope.launch {
+            repository.getFollowersCount(userId).collect { count ->
+                _followersCount.value = count
+            }
+        }
+        viewModelScope.launch {
+            repository.getFollowingCount(userId).collect { count ->
+                _followingCount.value = count
+            }
+        }
+    }
+
+    fun checkIsFollowing(followingId: String) {
+        viewModelScope.launch {
+            _currentUser.value?.let { currentUser ->
+                repository.isFollowing(currentUser.id, followingId).collect { following ->
+                    _isFollowing.value = following
+                }
+            }
+        }
+    }
+
+    fun toggleFollow(userId: String) {
+        viewModelScope.launch {
+            _currentUser.value?.let { currentUser ->
+                if (_isFollowing.value) {
+                    repository.unfollowUser(currentUser.id, userId)
+                } else {
+                    repository.followUser(currentUser.id, userId)
+                }
             }
         }
     }

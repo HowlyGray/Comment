@@ -11,6 +11,7 @@ import com.memoryshare.app.data.model.*
 @Database(
     entities = [
         User::class,
+        UserFollow::class,
         Conversation::class,
         Message::class,
         Post::class,
@@ -18,12 +19,13 @@ import com.memoryshare.app.data.model.*
         Media::class,
         Comment::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
+    abstract fun userFollowDao(): UserFollowDao
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
     abstract fun postDao(): PostDao

@@ -40,11 +40,14 @@ fun ProfileScreen(
     var showOptionsMenu by remember { mutableStateOf(false) }
 
     val userPosts by postViewModel.userPosts.collectAsState()
+    val followersCount by viewModel.followersCount.collectAsState()
+    val followingCount by viewModel.followingCount.collectAsState()
 
-    // Charger les posts de l'utilisateur
+    // Charger les posts et stats de l'utilisateur
     LaunchedEffect(currentUser?.id) {
         currentUser?.id?.let { userId ->
             postViewModel.loadUserPosts(userId)
+            viewModel.loadFollowStats(userId)
         }
     }
 
@@ -118,11 +121,11 @@ fun ProfileScreen(
                         label = "Publications"
                     )
                     ProfileStat(
-                        count = "0",
+                        count = followersCount.toString(),
                         label = "Abonnés"
                     )
                     ProfileStat(
-                        count = "0",
+                        count = followingCount.toString(),
                         label = "Abonnements"
                     )
                 }

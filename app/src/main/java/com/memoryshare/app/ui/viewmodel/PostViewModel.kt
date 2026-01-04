@@ -27,6 +27,9 @@ class PostViewModel(
     private val _userPosts = MutableStateFlow<List<Post>>(emptyList())
     val userPosts: StateFlow<List<Post>> = _userPosts.asStateFlow()
 
+    private val _followingPosts = MutableStateFlow<List<Post>>(emptyList())
+    val followingPosts: StateFlow<List<Post>> = _followingPosts.asStateFlow()
+
     init {
         loadPosts()
     }
@@ -35,6 +38,14 @@ class PostViewModel(
         viewModelScope.launch {
             repository.getAllPosts().collect { posts ->
                 _posts.value = posts
+            }
+        }
+    }
+
+    fun loadFollowingPosts(userId: String) {
+        viewModelScope.launch {
+            repository.getFollowingPosts(userId).collect { posts ->
+                _followingPosts.value = posts
             }
         }
     }
