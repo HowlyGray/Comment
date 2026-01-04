@@ -150,16 +150,17 @@ fun FeedScreen(
                             .padding(bottom = paddingValues.calculateBottomPadding())
                     ) {
                         items(posts) { post ->
-                        val author = allUsers.find { it.id == post.authorId }
-                        PostItem(
-                            post = post,
-                            author = author,
-                            currentUser = currentUser,
-                            onLikeClick = { viewModel.toggleLike(post) },
-                            onCommentClick = { onPostClick(post.id) },
-                            onPostClick = { onPostClick(post.id) }
-                        )
-                        Divider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+                            val author = allUsers.find { it.id == post.authorId }
+                            PostItem(
+                                post = post,
+                                author = author,
+                                currentUser = currentUser,
+                                onLikeClick = { viewModel.toggleLike(post) },
+                                onCommentClick = { onPostClick(post.id) },
+                                onPostClick = { onPostClick(post.id) }
+                            )
+                            Divider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+                        }
                     }
                 }
             }
