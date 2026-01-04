@@ -1,8 +1,10 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,26 +13,40 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
 import com.memoryshare.app.ui.components.UserAvatar
+import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: UserViewModel,
+    postViewModel: PostViewModel,
     currentUser: User?,
     onNavigateToMessages: () -> Unit,
     onNavigateToFeed: () -> Unit,
     onNavigateToMemories: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onPostClick: (String) -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var showOptionsMenu by remember { mutableStateOf(false) }
+
+    val userPosts by postViewModel.userPosts.collectAsState()
+
+    // Charger les posts de l'utilisateur
+    LaunchedEffect(currentUser?.id) {
+        currentUser?.id?.let { userId ->
+            postViewModel.loadUserPosts(userId)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -98,7 +114,7 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ProfileStat(
-                        count = "0",
+                        count = userPosts.size.toString(),
                         label = "Publications"
                     )
                     ProfileStat(
@@ -176,36 +192,58 @@ fun ProfileScreen(
                 )
             }
 
-            // Grille de publications (vide pour l'instant)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(32.dp)
+            // Grille de publications
+            if (userPosts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoLibrary,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Aucune publication",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Partagez des photos et des vidéos",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Aucune publication",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Partagez des photos et des vidéos",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    items(userPosts) { post ->
+                        AsyncImage(
+                            model = post.mediaUrls.firstOrNull() ?: post.thumbnailUrl,
+                            contentDescription = post.caption,
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clickable { onPostClick(post.id) },
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
         }
