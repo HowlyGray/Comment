@@ -1,5 +1,9 @@
 package com.memoryshare.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.MediaType
@@ -27,11 +32,33 @@ fun AddMediaScreen(
     onMediaAdded: () -> Unit
 ) {
     var selectedMediaType by remember { mutableStateOf(MediaType.IMAGE) }
+    var mediaUri by remember { mutableStateOf<Uri?>(null) }
     var mediaUrl by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var showUrlDialog by remember { mutableStateOf(false) }
+    var showMediaSourceDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+
+    // Launcher pour sélectionner une image ou vidéo
+    val visualMediaPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let {
+            mediaUri = it
+            mediaUrl = it.toString()
+        }
+    }
+
+    // Launcher pour sélectionner un fichier audio
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            mediaUri = it
+            mediaUrl = it.toString()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -157,7 +184,7 @@ fun AddMediaScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { showUrlDialog = true }) {
+                        Button(onClick = { showMediaSourceDialog = true }) {
                             Text("Ajouter ${when (selectedMediaType) {
                                 MediaType.IMAGE -> "une image"
                                 MediaType.VIDEO -> "une vidéo"
@@ -182,7 +209,7 @@ fun AddMediaScreen(
                         )
 
                         TextButton(
-                            onClick = { showUrlDialog = true },
+                            onClick = { showMediaSourceDialog = true },
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(8.dp)
@@ -219,8 +246,8 @@ fun AddMediaScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { showUrlDialog = true }) {
-                                Text("Changer l'URL")
+                            TextButton(onClick = { showMediaSourceDialog = true }) {
+                                Text("Changer")
                             }
                         }
                     }
@@ -280,6 +307,75 @@ fun AddMediaScreen(
         }
     }
 
+    // Dialog pour choisir la source du média
+    if (showMediaSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showMediaSourceDialog = false },
+            title = { Text("Choisir la source") },
+            text = {
+                Column {
+                    Text(
+                        text = "Comment souhaitez-vous ajouter votre ${when (selectedMediaType) {
+                            MediaType.IMAGE -> "image"
+                            MediaType.VIDEO -> "vidéo"
+                            MediaType.AUDIO -> "audio"
+                        }} ?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            showMediaSourceDialog = false
+                            when (selectedMediaType) {
+                                MediaType.IMAGE -> {
+                                    visualMediaPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                                MediaType.VIDEO -> {
+                                    visualMediaPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                                    )
+                                }
+                                MediaType.AUDIO -> {
+                                    audioPickerLauncher.launch("audio/*")
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Fichier local")
+                    }
+
+                    Button(
+                        onClick = {
+                            showMediaSourceDialog = false
+                            showUrlDialog = true
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("URL")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMediaSourceDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
     // Dialog pour entrer l'URL
     if (showUrlDialog) {
         var tempUrl by remember { mutableStateOf(mediaUrl) }
@@ -325,6 +421,7 @@ fun AddMediaScreen(
                 TextButton(
                     onClick = {
                         mediaUrl = tempUrl
+                        mediaUri = null
                         showUrlDialog = false
                     },
                     enabled = tempUrl.isNotBlank()
