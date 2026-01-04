@@ -272,6 +272,7 @@ fun AppNavigation(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 viewModel = userViewModel,
+                postViewModel = postViewModel,
                 currentUser = currentUser,
                 onNavigateToMessages = {
                     navController.navigate(Screen.Messages.route)
@@ -284,6 +285,9 @@ fun AppNavigation(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onPostClick = { postId ->
+                    navController.navigate(Screen.PostDetail.createRoute(postId))
                 }
             )
         }

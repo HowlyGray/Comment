@@ -24,6 +24,9 @@ class PostViewModel(
     private val _comments = MutableStateFlow<List<Comment>>(emptyList())
     val comments: StateFlow<List<Comment>> = _comments.asStateFlow()
 
+    private val _userPosts = MutableStateFlow<List<Post>>(emptyList())
+    val userPosts: StateFlow<List<Post>> = _userPosts.asStateFlow()
+
     init {
         loadPosts()
     }
@@ -48,6 +51,14 @@ class PostViewModel(
         viewModelScope.launch {
             repository.getCommentsByPost(postId).collect { comments ->
                 _comments.value = comments
+            }
+        }
+    }
+
+    fun loadUserPosts(userId: String) {
+        viewModelScope.launch {
+            repository.getPostsByUser(userId).collect { posts ->
+                _userPosts.value = posts
             }
         }
     }
