@@ -38,15 +38,30 @@ fun FeedScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    val posts by viewModel.posts.collectAsState()
+    val allPosts by viewModel.posts.collectAsState()
+    val followingPosts by viewModel.followingPosts.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) } // 0 = Pour vous, 1 = Abonnements
+
+    // Charger les posts des abonnements
+    LaunchedEffect(currentUser?.id) {
+        currentUser?.id?.let { userId ->
+            viewModel.loadFollowingPosts(userId)
+        }
+    }
+
+    val posts = if (selectedTab == 1) followingPosts else allPosts
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Fil d'actualité", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Fil d'actualité", fontWeight = FontWeight.Bold)
+                    }
+                },
                 actions = {
                     IconButton(onClick = { showOptionsMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options")
@@ -78,43 +93,63 @@ fun FeedScreen(
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Contenu principal
-            if (posts.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Aucune publication",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Partagez vos premiers souvenirs",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Tabs pour basculer entre les modes
+            TabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = paddingValues.calculateTopPadding())
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Pour vous") }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Abonnements") }
+                )
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Contenu principal
+                if (posts.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = paddingValues.calculateBottomPadding()),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoLibrary,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (selectedTab == 1) "Aucun abonnement" else "Aucune publication",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (selectedTab == 1) "Suivez des utilisateurs pour voir leurs publications" else "Partagez vos premiers souvenirs",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    items(posts) { post ->
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = paddingValues.calculateBottomPadding())
+                    ) {
+                        items(posts) { post ->
                         val author = allUsers.find { it.id == post.authorId }
                         PostItem(
                             post = post,

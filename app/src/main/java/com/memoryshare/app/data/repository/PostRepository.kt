@@ -18,6 +18,8 @@ class PostRepository(
 
     fun getPostsByUser(userId: String): Flow<List<Post>> = postDao.getPostsByUser(userId)
 
+    fun getFollowingPosts(userId: String): Flow<List<Post>> = postDao.getFollowingPosts(userId)
+
     fun getPostById(postId: String): Flow<Post?> = postDao.getPostById(postId)
 
     fun getCommentsByPost(postId: String): Flow<List<Comment>> = commentDao.getCommentsByPost(postId)
