@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.memoryshare.app.data.model.Media
 import com.memoryshare.app.data.model.MediaType
+import com.memoryshare.app.data.model.PermissionLevel
 import com.memoryshare.app.data.model.SharedSpace
+import com.memoryshare.app.data.model.SharedSpacePermission
 import com.memoryshare.app.data.repository.SharedSpaceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class SharedSpaceViewModel(
     private val repository: SharedSpaceRepository
@@ -23,6 +26,9 @@ class SharedSpaceViewModel(
 
     private val _media = MutableStateFlow<List<Media>>(emptyList())
     val media: StateFlow<List<Media>> = _media.asStateFlow()
+
+    private val _permissions = MutableStateFlow<List<SharedSpacePermission>>(emptyList())
+    val permissions: StateFlow<List<SharedSpacePermission>> = _permissions.asStateFlow()
 
     init {
         loadSpaces()
@@ -105,6 +111,26 @@ class SharedSpaceViewModel(
     fun deleteSpace(space: SharedSpace) {
         viewModelScope.launch {
             repository.deleteSharedSpace(space)
+        }
+    }
+
+    fun loadPermissions(spaceId: String) {
+        viewModelScope.launch {
+            repository.getSpacePermissions(spaceId).collect { permissions ->
+                _permissions.value = permissions
+            }
+        }
+    }
+
+    fun updatePermission(spaceId: String, userId: String, permissionLevel: PermissionLevel) {
+        viewModelScope.launch {
+            val permission = SharedSpacePermission(
+                id = UUID.randomUUID().toString(),
+                spaceId = spaceId,
+                userId = userId,
+                permissionLevel = permissionLevel
+            )
+            repository.updatePermission(permission)
         }
     }
 }
