@@ -241,6 +241,7 @@ fun MemorySpaceScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionsDialog(
     space: com.memoryshare.app.data.model.SharedSpace?,
@@ -276,12 +277,12 @@ fun PermissionsDialog(
                     items(space.memberIds) { userId ->
                         val user = allUsers.find { it.id == userId }
                         val permission = permissions.find { it.userId == userId }
-                        val isOwner = space.createdBy == userId
+                        val isOwner = space.creatorId == userId
                         val isCurrentUser = currentUser?.id == userId
 
                         MemberPermissionItem(
                             user = user,
-                            permissionLevel = permission?.permissionLevel ?: PermissionLevel.READ,
+                            permissionLevel = permission?.permission ?: PermissionLevel.READ,
                             isOwner = isOwner,
                             isCurrentUser = isCurrentUser,
                             onPermissionChange = { newLevel ->
@@ -325,7 +326,7 @@ fun PermissionsDialog(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "• LECTURE : Peut voir les médias\n• ÉCRITURE : Peut ajouter et supprimer des médias",
+                                text = "• LECTURE : Peut voir les médias• ÉCRITURE : Peut ajouter et supprimer des médias",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
@@ -342,6 +343,7 @@ fun PermissionsDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberPermissionItem(
     user: User?,

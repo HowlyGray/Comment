@@ -120,7 +120,7 @@ class SharedSpaceRepository(
     }
 
     fun getSpacePermissions(spaceId: String): Flow<List<SharedSpacePermission>> =
-        permissionDao.getPermissionsBySpace(spaceId)
+        permissionDao.getPermissionsForSpace(spaceId)
 
     suspend fun updatePermission(permission: SharedSpacePermission) {
         permissionDao.insertPermission(permission)
