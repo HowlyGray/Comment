@@ -128,7 +128,7 @@ class SharedSpaceViewModel(
                 id = UUID.randomUUID().toString(),
                 spaceId = spaceId,
                 userId = userId,
-                permissionLevel = permissionLevel
+                permission = permissionLevel
             )
             repository.updatePermission(permission)
         }

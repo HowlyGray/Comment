@@ -281,7 +281,7 @@ fun PermissionsDialog(
 
                         MemberPermissionItem(
                             user = user,
-                            permissionLevel = permission?.permissionLevel ?: PermissionLevel.READ,
+                            permissionLevel = permission?.permission ?: PermissionLevel.READ,
                             isOwner = isOwner,
                             isCurrentUser = isCurrentUser,
                             onPermissionChange = { newLevel ->
