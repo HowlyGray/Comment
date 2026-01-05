@@ -1,10 +1,14 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,7 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
@@ -40,6 +46,14 @@ fun MessageDetailScreen(
     var showOptionsMenu by remember { mutableStateOf(false) }
     var showAttachmentMenu by remember { mutableStateOf(false) }
 
+    // États pour édition, réponse et réactions
+    var selectedMessage by remember { mutableStateOf<Message?>(null) }
+    var showMessageOptionsMenu by remember { mutableStateOf(false) }
+    var editingMessage by remember { mutableStateOf<Message?>(null) }
+    var replyingToMessage by remember { mutableStateOf<Message?>(null) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
+    var messageToReact by remember { mutableStateOf<Message?>(null) }
+
     LaunchedEffect(conversationId) {
         viewModel.loadConversation(conversationId)
         viewModel.loadMessages(conversationId)
@@ -49,6 +63,13 @@ fun MessageDetailScreen(
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    // Remplir le champ texte lors de l'édition
+    LaunchedEffect(editingMessage) {
+        if (editingMessage != null) {
+            messageText = editingMessage!!.content
         }
     }
 
@@ -174,6 +195,80 @@ fun MessageDetailScreen(
                 shadowElevation = 8.dp
             ) {
                 Column {
+                    // Indicateur de réponse
+                    if (replyingToMessage != null) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Reply,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Répondre à",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = replyingToMessage!!.content,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                IconButton(onClick = { replyingToMessage = null }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Annuler")
+                                }
+                            }
+                        }
+                    }
+
+                    // Indicateur d'édition
+                    if (editingMessage != null) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.tertiary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Modifier le message",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = {
+                                    editingMessage = null
+                                    messageText = ""
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Annuler")
+                                }
+                            }
+                        }
+                    }
+
                     if (showAttachmentMenu) {
                         AttachmentOptionsGrid(
                             onDismiss = { showAttachmentMenu = false },
@@ -193,19 +288,27 @@ fun MessageDetailScreen(
                             .padding(8.dp),
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        IconButton(onClick = { showAttachmentMenu = !showAttachmentMenu }) {
-                            Icon(
-                                imageVector = if (showAttachmentMenu) Icons.Default.Close else Icons.Default.Add,
-                                contentDescription = "Attacher",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        if (editingMessage == null) {
+                            IconButton(onClick = { showAttachmentMenu = !showAttachmentMenu }) {
+                                Icon(
+                                    imageVector = if (showAttachmentMenu) Icons.Default.Close else Icons.Default.Add,
+                                    contentDescription = "Attacher",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
 
                         OutlinedTextField(
                             value = messageText,
                             onValueChange = { messageText = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Message...") },
+                            placeholder = { Text(
+                                when {
+                                    editingMessage != null -> "Modifier le message..."
+                                    replyingToMessage != null -> "Répondre..."
+                                    else -> "Message..."
+                                }
+                            ) },
                             maxLines = 4,
                             trailingIcon = {
                                 IconButton(onClick = { /* TODO: Show emoji picker */ }) {
@@ -216,7 +319,7 @@ fun MessageDetailScreen(
 
                         Spacer(modifier = Modifier.width(4.dp))
 
-                        if (messageText.isBlank()) {
+                        if (messageText.isBlank() && editingMessage == null) {
                             IconButton(onClick = { /* TODO: Record voice note */ }) {
                                 Icon(Icons.Default.Mic, contentDescription = "Mémo vocal")
                             }
@@ -224,17 +327,42 @@ fun MessageDetailScreen(
                             IconButton(
                                 onClick = {
                                     if (messageText.isNotBlank() && currentUser != null) {
-                                        viewModel.sendMessage(
-                                            conversationId = conversationId,
-                                            senderId = currentUser.id,
-                                            content = messageText,
-                                            type = MessageType.TEXT
-                                        )
-                                        messageText = ""
+                                        when {
+                                            editingMessage != null -> {
+                                                // Éditer le message
+                                                viewModel.editMessage(editingMessage!!.id, messageText)
+                                                editingMessage = null
+                                                messageText = ""
+                                            }
+                                            replyingToMessage != null -> {
+                                                // Envoyer une réponse
+                                                viewModel.replyToMessage(
+                                                    conversationId = conversationId,
+                                                    senderId = currentUser.id,
+                                                    content = messageText,
+                                                    replyToMessageId = replyingToMessage!!.id
+                                                )
+                                                replyingToMessage = null
+                                                messageText = ""
+                                            }
+                                            else -> {
+                                                // Envoyer un message normal
+                                                viewModel.sendMessage(
+                                                    conversationId = conversationId,
+                                                    senderId = currentUser.id,
+                                                    content = messageText,
+                                                    type = MessageType.TEXT
+                                                )
+                                                messageText = ""
+                                            }
+                                        }
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = "Envoyer")
+                                Icon(
+                                    imageVector = if (editingMessage != null) Icons.Default.Check else Icons.Default.Send,
+                                    contentDescription = if (editingMessage != null) "Valider" else "Envoyer"
+                                )
                             }
                         }
                     }
@@ -242,18 +370,135 @@ fun MessageDetailScreen(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 8.dp),
-            state = listState
-        ) {
-            items(messages) { message ->
-                MessageBubble(
-                    message = message,
-                    isFromCurrentUser = message.senderId == currentUser?.id
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 8.dp),
+                state = listState
+            ) {
+                items(messages) { message ->
+                    MessageBubble(
+                        message = message,
+                        isFromCurrentUser = message.senderId == currentUser?.id,
+                        currentUser = currentUser,
+                        allUsers = allUsers,
+                        onLongPress = {
+                            selectedMessage = message
+                            showMessageOptionsMenu = true
+                        },
+                        onReactionClick = {
+                            messageToReact = message
+                            showEmojiPicker = true
+                        }
+                    )
+                }
+            }
+
+            // Menu d'options du message
+            if (showMessageOptionsMenu && selectedMessage != null) {
+                val isOwnMessage = selectedMessage?.senderId == currentUser?.id
+
+                AlertDialog(
+                    onDismissRequest = {
+                        showMessageOptionsMenu = false
+                        selectedMessage = null
+                    },
+                    title = { Text("Actions") },
+                    text = {
+                        Column {
+                            if (isOwnMessage) {
+                                TextButton(
+                                    onClick = {
+                                        editingMessage = selectedMessage
+                                        showMessageOptionsMenu = false
+                                        selectedMessage = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Modifier")
+                                }
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    replyingToMessage = selectedMessage
+                                    showMessageOptionsMenu = false
+                                    selectedMessage = null
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Reply, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Répondre")
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    messageToReact = selectedMessage
+                                    showEmojiPicker = true
+                                    showMessageOptionsMenu = false
+                                    selectedMessage = null
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.EmojiEmotions, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Réagir")
+                            }
+
+                            if (isOwnMessage) {
+                                TextButton(
+                                    onClick = {
+                                        selectedMessage?.let { viewModel.deleteMessage(it.id) }
+                                        showMessageOptionsMenu = false
+                                        selectedMessage = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Supprimer", color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showMessageOptionsMenu = false
+                            selectedMessage = null
+                        }) {
+                            Text("Annuler")
+                        }
+                    }
                 )
+            }
+
+            // Sélecteur d'emoji pour réactions
+            if (showEmojiPicker && messageToReact != null) {
+                ModalBottomSheet(
+                    onDismissRequest = {
+                        showEmojiPicker = false
+                        messageToReact = null
+                    }
+                ) {
+                    EmojiPicker(
+                        onEmojiSelected = { emoji ->
+                            currentUser?.let { user ->
+                                viewModel.addReaction(messageToReact!!.id, user.id, emoji)
+                            }
+                            showEmojiPicker = false
+                            messageToReact = null
+                        },
+                        onDismiss = {
+                            showEmojiPicker = false
+                            messageToReact = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -372,10 +617,15 @@ fun AttachmentOption(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubble(
     message: Message,
-    isFromCurrentUser: Boolean
+    isFromCurrentUser: Boolean,
+    currentUser: User?,
+    allUsers: List<User>,
+    onLongPress: () -> Unit,
+    onReactionClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -384,7 +634,8 @@ fun MessageBubble(
         horizontalArrangement = if (isFromCurrentUser) Arrangement.End else Arrangement.Start
     ) {
         if (!isFromCurrentUser) {
-            UserAvatar(user = null, size = 32.dp)
+            val sender = allUsers.find { it.id == message.senderId }
+            UserAvatar(user = sender, size = 32.dp)
             Spacer(modifier = Modifier.width(8.dp))
         }
 
@@ -392,7 +643,38 @@ fun MessageBubble(
             modifier = Modifier.widthIn(max = 280.dp),
             horizontalAlignment = if (isFromCurrentUser) Alignment.End else Alignment.Start
         ) {
+            // Message répondu (citation)
+            if (message.replyToId != null) {
+                Surface(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Reply,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Réponse à un message",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             Surface(
+                modifier = Modifier.combinedClickable(
+                    onClick = {},
+                    onLongClick = onLongPress
+                ),
                 shape = RoundedCornerShape(
                     topStart = 16.dp,
                     topEnd = 16.dp,
@@ -429,19 +711,107 @@ fun MessageBubble(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = formatTime(message.timestamp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = formatTime(message.timestamp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (message.editedAt != null) {
+                            Text(
+                                text = "• modifié",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                 }
+            }
+
+            // Afficher les réactions (si implémenté dans le ViewModel)
+            // Placeholder pour les réactions
+            IconButton(
+                onClick = onReactionClick,
+                modifier = Modifier
+                    .size(32.dp)
+                    .padding(top = 4.dp)
+            ) {
+                Icon(
+                    Icons.Default.AddReaction,
+                    contentDescription = "Ajouter réaction",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         if (isFromCurrentUser) {
             Spacer(modifier = Modifier.width(8.dp))
-            UserAvatar(user = null, size = 32.dp)
+            currentUser?.let { UserAvatar(user = it, size = 32.dp) }
         }
+    }
+}
+
+@Composable
+fun EmojiPicker(
+    onEmojiSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val commonEmojis = listOf(
+        "❤️", "👍", "👎", "😂", "😮", "😢", "😡", "🔥",
+        "🎉", "👏", "💯", "✅", "❌", "🙏", "💪", "👀",
+        "😍", "🤔", "😊", "🥳", "😎", "🤗", "🙌", "💙"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Choisir une réaction",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(commonEmojis) { emoji ->
+                Surface(
+                    onClick = { onEmojiSelected(emoji) },
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = emoji,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Annuler")
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

@@ -36,7 +36,9 @@ fun FeedScreen(
     onNavigateToMessages: () -> Unit,
     onNavigateToMemories: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToStories: () -> Unit = {},
+    onNavigateToReels: () -> Unit = {}
 ) {
     val allPosts by viewModel.posts.collectAsState()
     val followingPosts by viewModel.followingPosts.collectAsState()
@@ -63,6 +65,9 @@ fun FeedScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToReels) {
+                        Icon(Icons.Default.VideoLibrary, contentDescription = "Reels")
+                    }
                     IconButton(onClick = { showOptionsMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options")
                     }
@@ -112,6 +117,51 @@ fun FeedScreen(
                     text = { Text("Abonnements") }
                 )
             }
+
+            // Barre de Stories
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Bouton "Votre story"
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { onNavigateToStories() }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Ajouter story",
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Text(
+                        text = "Votre story",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                Text(
+                    text = "Glissez pour voir les stories →",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            }
+
+            Divider()
 
             Box(modifier = Modifier.fillMaxSize()) {
                 // Contenu principal
