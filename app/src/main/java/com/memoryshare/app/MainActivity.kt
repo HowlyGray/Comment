@@ -52,7 +52,8 @@ class MainActivity : ComponentActivity() {
         )
         val spaceRepository = SharedSpaceRepository(
             database.sharedSpaceDao(),
-            database.mediaDao()
+            database.mediaDao(),
+            database.sharedSpacePermissionDao()
         )
 
         setContent {

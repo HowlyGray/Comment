@@ -245,6 +245,7 @@ fun AppNavigation(
             MemorySpaceScreen(
                 spaceId = spaceId,
                 viewModel = spaceViewModel,
+                userViewModel = userViewModel,
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() },
                 onAddMedia = {
