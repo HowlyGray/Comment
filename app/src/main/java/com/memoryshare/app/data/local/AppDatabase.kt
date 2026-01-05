@@ -16,13 +16,15 @@ import com.memoryshare.app.data.model.*
         Message::class,
         MessageReaction::class,
         Post::class,
+        Story::class,
+        Reel::class,
         SharedSpace::class,
         Media::class,
         MediaComment::class,
         Comment::class,
         SharedSpacePermission::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -33,6 +35,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun messageReactionDao(): MessageReactionDao
     abstract fun postDao(): PostDao
+    abstract fun storyDao(): StoryDao
+    abstract fun reelDao(): ReelDao
     abstract fun sharedSpaceDao(): SharedSpaceDao
     abstract fun mediaDao(): MediaDao
     abstract fun mediaCommentDao(): MediaCommentDao

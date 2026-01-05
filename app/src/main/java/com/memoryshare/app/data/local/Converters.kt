@@ -5,6 +5,7 @@ import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.PermissionLevel
+import com.memoryshare.app.data.model.StoryMediaType
 
 class Converters {
     @TypeConverter
@@ -55,5 +56,15 @@ class Converters {
     @TypeConverter
     fun toPermissionLevel(value: String): PermissionLevel {
         return PermissionLevel.valueOf(value)
+    }
+
+    @TypeConverter
+    fun fromStoryMediaType(value: StoryMediaType): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun toStoryMediaType(value: String): StoryMediaType {
+        return StoryMediaType.valueOf(value)
     }
 }
