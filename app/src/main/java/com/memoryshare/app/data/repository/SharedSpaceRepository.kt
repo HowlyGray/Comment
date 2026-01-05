@@ -2,16 +2,19 @@ package com.memoryshare.app.data.repository
 
 import com.memoryshare.app.data.local.dao.MediaDao
 import com.memoryshare.app.data.local.dao.SharedSpaceDao
+import com.memoryshare.app.data.local.dao.SharedSpacePermissionDao
 import com.memoryshare.app.data.model.Media
 import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.SharedSpace
+import com.memoryshare.app.data.model.SharedSpacePermission
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
 class SharedSpaceRepository(
     private val sharedSpaceDao: SharedSpaceDao,
-    private val mediaDao: MediaDao
+    private val mediaDao: MediaDao,
+    private val permissionDao: SharedSpacePermissionDao
 ) {
 
     fun getAllSharedSpaces(): Flow<List<SharedSpace>> = sharedSpaceDao.getAllSharedSpaces()
@@ -114,5 +117,12 @@ class SharedSpaceRepository(
     suspend fun deleteSharedSpace(space: SharedSpace) {
         mediaDao.deleteMediaBySpace(space.id)
         sharedSpaceDao.deleteSharedSpace(space)
+    }
+
+    fun getSpacePermissions(spaceId: String): Flow<List<SharedSpacePermission>> =
+        permissionDao.getPermissionsBySpace(spaceId)
+
+    suspend fun updatePermission(permission: SharedSpacePermission) {
+        permissionDao.insertPermission(permission)
     }
 }
