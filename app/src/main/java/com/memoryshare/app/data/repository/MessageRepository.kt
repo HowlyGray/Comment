@@ -102,6 +102,10 @@ class MessageRepository(
         conversationDao.deleteConversation(conversation)
     }
 
+    suspend fun deleteMessage(message: Message) {
+        messageDao.deleteMessage(message)
+    }
+
     // Edit message
     suspend fun editMessage(messageId: String, newContent: String) {
         val message = messageDao.getMessageByIdSync(messageId)

@@ -97,4 +97,38 @@ class MessageViewModel(
             repository.deleteConversation(conversation)
         }
     }
+
+    fun deleteMessage(message: Message) {
+        viewModelScope.launch {
+            repository.deleteMessage(message)
+        }
+    }
+
+    fun editMessage(messageId: String, newContent: String) {
+        viewModelScope.launch {
+            repository.editMessage(messageId, newContent)
+        }
+    }
+
+    fun replyToMessage(
+        conversationId: String,
+        senderId: String,
+        content: String,
+        replyToMessageId: String
+    ) {
+        viewModelScope.launch {
+            repository.replyToMessage(
+                conversationId = conversationId,
+                senderId = senderId,
+                content = content,
+                replyToId = replyToMessageId
+            )
+        }
+    }
+
+    fun addReaction(messageId: String, userId: String, emoji: String) {
+        viewModelScope.launch {
+            repository.addReaction(messageId, userId, emoji)
+        }
+    }
 }

@@ -453,7 +453,7 @@ fun MessageDetailScreen(
                             if (isOwnMessage) {
                                 TextButton(
                                     onClick = {
-                                        selectedMessage?.let { viewModel.deleteMessage(it.id) }
+                                        selectedMessage?.let { viewModel.deleteMessage(it) }
                                         showMessageOptionsMenu = false
                                         selectedMessage = null
                                     },
