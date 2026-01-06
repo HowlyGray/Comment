@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
+import com.memoryshare.app.ui.navigation.Screen
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
@@ -97,7 +98,8 @@ fun AllStarredMessagesScreen(
                         },
                         onClick = {
                             // Naviguer vers la conversation
-                            navController.navigate("messages/${message.conversationId}")
+                            navController.navigate(Screen.MessageDetail.createRoute(message.conversationId))
+                            // TODO: Scroll to specific message
                         }
                     )
                 }

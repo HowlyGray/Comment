@@ -92,6 +92,11 @@ fun StarredMessagesScreen(
                     StarredMessageItem(
                         message = message,
                         userViewModel = userViewModel,
+                        onClick = {
+                            // Navigate back to conversation with this message
+                            navController.popBackStack()
+                            // TODO: Scroll to specific message
+                        },
                         onUnstar = {
                             messageViewModel.toggleStarredStatus(message.id, false)
                         }
@@ -102,16 +107,19 @@ fun StarredMessagesScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StarredMessageItem(
     message: Message,
     userViewModel: UserViewModel,
+    onClick: () -> Unit = {},
     onUnstar: () -> Unit
 ) {
     val sender by userViewModel.getUserById(message.senderId).collectAsState(initial = null)
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier
