@@ -3,10 +3,12 @@ package com.memoryshare.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.memoryshare.app.data.local.PreferencesManager
+import com.memoryshare.app.data.repository.CallRepository
 import com.memoryshare.app.data.repository.MessageRepository
 import com.memoryshare.app.data.repository.PostRepository
 import com.memoryshare.app.data.repository.SharedSpaceRepository
 import com.memoryshare.app.data.repository.UserRepository
+import com.memoryshare.app.ui.viewmodel.CallViewModel
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
@@ -33,6 +35,9 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(SharedSpaceViewModel::class.java) -> {
                 SharedSpaceViewModel(repository as SharedSpaceRepository) as T
+            }
+            modelClass.isAssignableFrom(CallViewModel::class.java) -> {
+                CallViewModel(repository as CallRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

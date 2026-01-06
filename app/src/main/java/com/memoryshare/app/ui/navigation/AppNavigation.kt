@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.memoryshare.app.ui.screens.*
+import com.memoryshare.app.ui.viewmodel.CallViewModel
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
@@ -25,7 +26,8 @@ fun AppNavigation(
     messageViewModel: MessageViewModel,
     postViewModel: PostViewModel,
     spaceViewModel: SharedSpaceViewModel,
-    preferencesViewModel: PreferencesViewModel
+    preferencesViewModel: PreferencesViewModel,
+    callViewModel: CallViewModel
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -82,6 +84,12 @@ fun AppNavigation(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToArchived = {
+                    navController.navigate(Screen.ArchivedConversations.route)
+                },
+                onNavigateToAllStarred = {
+                    navController.navigate(Screen.AllStarredMessages.route)
                 }
             )
         }
@@ -306,6 +314,114 @@ fun AppNavigation(
                     }
                 },
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Écrans d'appels
+        composable(
+            route = Screen.Call.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            CallScreen(
+                userId = userId,
+                navController = navController,
+                callViewModel = callViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
+        composable(
+            route = Screen.VideoCall.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            VideoCallScreen(
+                userId = userId,
+                navController = navController,
+                callViewModel = callViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
+        composable(Screen.CallHistory.route) {
+            CallHistoryScreen(
+                navController = navController,
+                callViewModel = callViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
+        // Écrans de contact et médias
+        composable(
+            route = Screen.ContactDetail.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            ContactDetailScreen(
+                userId = userId,
+                navController = navController,
+                userViewModel = userViewModel,
+                messageViewModel = messageViewModel,
+                callViewModel = callViewModel
+            )
+        }
+
+        composable(
+            route = Screen.ConversationMedia.route,
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
+            ConversationMediaScreen(
+                conversationId = conversationId,
+                navController = navController,
+                messageViewModel = messageViewModel
+            )
+        }
+
+        // Écrans de messages importants
+        composable(
+            route = Screen.StarredMessages.route,
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
+            StarredMessagesScreen(
+                conversationId = conversationId,
+                navController = navController,
+                messageViewModel = messageViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
+        composable(Screen.AllStarredMessages.route) {
+            AllStarredMessagesScreen(
+                navController = navController,
+                messageViewModel = messageViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
+        // Conversations archivées
+        composable(Screen.ArchivedConversations.route) {
+            ArchivedConversationsScreen(
+                navController = navController,
+                messageViewModel = messageViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
+        // Caméra
+        composable(Screen.Camera.route) {
+            CameraScreen(
+                navController = navController,
+                onPhotoCaptured = { photoPath ->
+                    // TODO: Gérer la photo capturée
+                    navController.popBackStack()
+                },
+                onVideoCaptured = { videoPath ->
+                    // TODO: Gérer la vidéo capturée
+                    navController.popBackStack()
+                }
             )
         }
     }

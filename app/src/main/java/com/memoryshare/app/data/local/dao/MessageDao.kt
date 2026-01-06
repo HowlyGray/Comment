@@ -35,4 +35,13 @@ interface MessageDao {
 
     @Query("UPDATE messages SET isRead = 1 WHERE conversationId = :conversationId")
     suspend fun markConversationAsRead(conversationId: String)
+
+    @Query("SELECT * FROM messages WHERE isStarred = 1 ORDER BY timestamp DESC")
+    fun getAllStarredMessages(): Flow<List<Message>>
+
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId AND isStarred = 1 ORDER BY timestamp DESC")
+    fun getStarredMessagesByConversation(conversationId: String): Flow<List<Message>>
+
+    @Query("UPDATE messages SET isStarred = :isStarred WHERE id = :messageId")
+    suspend fun updateStarredStatus(messageId: String, isStarred: Boolean)
 }
