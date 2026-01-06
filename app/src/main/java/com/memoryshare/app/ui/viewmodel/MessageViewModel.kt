@@ -147,6 +147,8 @@ class MessageViewModel(
     // Archived conversations methods
     fun getArchivedConversations() = repository.getArchivedConversations()
 
+    fun getUnreadArchivedMessagesCount() = repository.getUnreadArchivedMessagesCount()
+
     fun archiveConversation(conversationId: String, archived: Boolean) {
         viewModelScope.launch {
             repository.archiveConversation(conversationId, archived)

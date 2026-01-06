@@ -42,6 +42,7 @@ fun MessagesScreen(
     val conversations by viewModel.conversations.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
+    val unreadArchivedCount by viewModel.getUnreadArchivedMessagesCount().collectAsState(initial = 0)
 
     var showOptionsMenu by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
@@ -238,6 +239,17 @@ fun MessagesScreen(
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.weight(1f)
                                     )
+                                    if (unreadArchivedCount > 0) {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ) {
+                                            Text(
+                                                text = unreadArchivedCount.toString(),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
                                     Icon(
                                         imageVector = Icons.Default.ChevronRight,
                                         contentDescription = null,
