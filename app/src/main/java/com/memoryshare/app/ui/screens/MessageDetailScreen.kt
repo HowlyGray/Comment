@@ -40,7 +40,8 @@ fun MessageDetailScreen(
     onBack: () -> Unit,
     onNavigateToContactDetail: (String) -> Unit = {},
     onNavigateToVideoCall: (String) -> Unit = {},
-    onNavigateToVoiceCall: (String) -> Unit = {}
+    onNavigateToVoiceCall: (String) -> Unit = {},
+    onNavigateToForward: () -> Unit
 ) {
     val messages by viewModel.currentMessages.collectAsState()
     val conversation by viewModel.currentConversation.collectAsState()
@@ -151,7 +152,7 @@ fun MessageDetailScreen(
                         IconButton(onClick = {
                             // Store selected message IDs in ViewModel for ForwardMessagesScreen
                             viewModel.setMessagesToForward(selectedMessages.toList())
-                            navController.navigate("forward_messages")
+                            onNavigateToForward()
                             isSelectionMode = false
                             selectedMessages = emptySet()
                         }) {
