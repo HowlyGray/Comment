@@ -25,6 +25,9 @@ class MessageViewModel(
     private val _currentConversation = MutableStateFlow<Conversation?>(null)
     val currentConversation: StateFlow<Conversation?> = _currentConversation.asStateFlow()
 
+    private val _messagesToForward = MutableStateFlow<List<String>>(emptyList())
+    val messagesToForward: StateFlow<List<String>> = _messagesToForward.asStateFlow()
+
     private var loadConversationJob: Job? = null
     private var loadMessagesJob: Job? = null
 
@@ -215,6 +218,16 @@ class MessageViewModel(
         viewModelScope.launch {
             repository.forwardMessages(messageIds, targetConversationId, senderId)
         }
+    }
+
+    // Store messages to forward temporarily
+    fun setMessagesToForward(messageIds: List<String>) {
+        _messagesToForward.value = messageIds
+    }
+
+    // Clear messages to forward
+    fun clearMessagesToForward() {
+        _messagesToForward.value = emptyList()
     }
 
     // Conversation by ID

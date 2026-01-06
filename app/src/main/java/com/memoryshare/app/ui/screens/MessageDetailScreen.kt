@@ -61,7 +61,6 @@ fun MessageDetailScreen(
     // États pour le mode sélection multiple
     var isSelectionMode by remember { mutableStateOf(false) }
     var selectedMessages by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var showForwardDialog by remember { mutableStateOf(false) }
 
     // Exit selection mode when no items are selected
     LaunchedEffect(selectedMessages) {
@@ -130,18 +129,31 @@ fun MessageDetailScreen(
                             }
                         }
 
-                        // Star button
+                        // Star/Unstar toggle button
                         IconButton(onClick = {
-                            viewModel.starMultipleMessages(selectedMessages.toList(), true)
+                            val selectedMsgs = messages.filter { selectedMessages.contains(it.id) }
+                            val allStarred = selectedMsgs.all { it.isStarred }
+                            // If all selected messages are starred, unstar them; otherwise star them
+                            viewModel.starMultipleMessages(selectedMessages.toList(), !allStarred)
                             isSelectionMode = false
                             selectedMessages = emptySet()
                         }) {
-                            Icon(Icons.Default.Star, contentDescription = "Important")
+                            val selectedMsgs = messages.filter { selectedMessages.contains(it.id) }
+                            val allStarred = selectedMsgs.all { it.isStarred }
+                            Icon(
+                                imageVector = if (allStarred) Icons.Default.StarBorder else Icons.Default.Star,
+                                contentDescription = if (allStarred) "Retirer important" else "Marquer important",
+                                tint = if (allStarred) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary
+                            )
                         }
 
                         // Forward button
                         IconButton(onClick = {
-                            showForwardDialog = true
+                            // Store selected message IDs in ViewModel for ForwardMessagesScreen
+                            viewModel.setMessagesToForward(selectedMessages.toList())
+                            navController.navigate("forward_messages")
+                            isSelectionMode = false
+                            selectedMessages = emptySet()
                         }) {
                             Icon(Icons.Default.Forward, contentDescription = "Transférer")
                         }

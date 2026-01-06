@@ -506,6 +506,21 @@ fun AppNavigation(
             )
         }
 
+        // Forward messages
+        composable(
+            route = Screen.ForwardMessages.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
+            ForwardMessagesScreen(
+                navController = navController,
+                messageViewModel = messageViewModel,
+                userViewModel = userViewModel
+            )
+        }
+
         // Caméra
         composable(
             route = Screen.Camera.route,
