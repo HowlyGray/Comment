@@ -473,6 +473,7 @@ fun MessageDetailScreen(
                         isFromCurrentUser = message.senderId == currentUser?.id,
                         currentUser = currentUser,
                         allUsers = allUsers,
+                        messageViewModel = viewModel,
                         isSelected = selectedMessages.contains(message.id),
                         isSelectionMode = isSelectionMode,
                         onClick = {
@@ -730,12 +731,14 @@ fun MessageBubble(
     isFromCurrentUser: Boolean,
     currentUser: User?,
     allUsers: List<User>,
+    messageViewModel: MessageViewModel,
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
     onClick: () -> Unit = {},
     onLongPress: () -> Unit,
     onReactionClick: () -> Unit
 ) {
+    val reactions by messageViewModel.getReactionsForMessage(message.id).collectAsState(initial = emptyList())
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -848,12 +851,54 @@ fun MessageBubble(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
+                        // Show star icon if message is starred
+                        if (message.isStarred) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Message important",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
 
-            // Afficher les réactions (si implémenté dans le ViewModel)
-            // Placeholder pour les réactions
+            // Display reactions grouped by emoji
+            if (reactions.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Group reactions by emoji and count them
+                    val groupedReactions = reactions.groupBy { it.emoji }
+                    groupedReactions.forEach { (emoji, emojiReactions) ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.padding(2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = emoji,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = emojiReactions.size.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Add reaction button
             IconButton(
                 onClick = onReactionClick,
                 modifier = Modifier
