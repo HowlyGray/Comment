@@ -126,7 +126,7 @@ fun StarredMessageItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = sender?.name ?: "Utilisateur",
+                    text = sender?.displayName ?: "Utilisateur",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )

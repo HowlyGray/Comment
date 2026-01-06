@@ -123,7 +123,7 @@ fun ArchivedConversationItem(
     val displayName = if (conversation.isGroup) {
         conversation.name ?: "Groupe"
     } else {
-        otherUser?.name ?: "Utilisateur"
+        otherUser?.displayName ?: "Utilisateur"
     }
 
     val displayImageUrl = if (conversation.isGroup) {

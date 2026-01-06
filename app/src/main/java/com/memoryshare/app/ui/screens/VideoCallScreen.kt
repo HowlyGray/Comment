@@ -65,7 +65,7 @@ fun VideoCallScreen(
                             size = 120.dp
                         )
                         Text(
-                            text = currentUser.name,
+                            text = currentUser.displayName,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -75,7 +75,7 @@ fun VideoCallScreen(
             } else {
                 // Placeholder pour la vidéo
                 Text(
-                    text = "Vidéo de ${user?.name ?: "l'utilisateur"}",
+                    text = "Vidéo de ${user?.displayName ?: "l'utilisateur"}",
                     color = Color.White,
                     fontSize = 16.sp
                 )
