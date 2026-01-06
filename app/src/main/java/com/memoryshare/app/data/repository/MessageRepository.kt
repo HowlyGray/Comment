@@ -193,12 +193,23 @@ class MessageRepository(
     fun getArchivedConversations(): Flow<List<Conversation>> =
         conversationDao.getArchivedConversations()
 
+    fun getUnreadArchivedMessagesCount(): Flow<Int> =
+        messageDao.getUnreadArchivedMessagesCount()
+
     suspend fun archiveConversation(conversationId: String, archived: Boolean) {
         conversationDao.updateArchivedStatus(conversationId, archived)
+        // Auto-mute when archiving
+        if (archived) {
+            conversationDao.updateMutedStatus(conversationId, true)
+        }
     }
 
     suspend fun archiveMultipleConversations(conversationIds: List<String>, archived: Boolean) {
         conversationDao.updateMultipleArchivedStatus(conversationIds, archived)
+        // Auto-mute when archiving
+        if (archived) {
+            conversationDao.updateMultipleMutedStatus(conversationIds, true)
+        }
     }
 
     // Pin conversations

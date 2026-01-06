@@ -1,6 +1,8 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,7 +25,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ArchivedConversationsScreen(
     navController: NavController,
@@ -33,22 +35,67 @@ fun ArchivedConversationsScreen(
     val archivedConversations = remember { mutableStateOf<List<Conversation>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedConversations by remember { mutableStateOf<Set<String>>(emptySet()) }
+
     LaunchedEffect(Unit) {
         messageViewModel.getArchivedConversations().collect { conversations ->
             archivedConversations.value = conversations
         }
     }
 
+    // Exit selection mode when no items are selected
+    LaunchedEffect(selectedConversations) {
+        if (selectedConversations.isEmpty() && isSelectionMode) {
+            isSelectionMode = false
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Conversations archivées") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, "Retour")
+            if (isSelectionMode) {
+                // Selection mode top bar
+                TopAppBar(
+                    title = { Text("${selectedConversations.size} sélectionnée(s)") },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            isSelectionMode = false
+                            selectedConversations = emptySet()
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "Annuler")
+                        }
+                    },
+                    actions = {
+                        // Unarchive button
+                        IconButton(onClick = {
+                            messageViewModel.archiveMultipleConversations(selectedConversations.toList(), false)
+                            isSelectionMode = false
+                            selectedConversations = emptySet()
+                        }) {
+                            Icon(Icons.Default.Unarchive, contentDescription = "Désarchiver")
+                        }
+
+                        // Delete button
+                        IconButton(onClick = {
+                            messageViewModel.deleteMultipleConversations(selectedConversations.toList())
+                            isSelectionMode = false
+                            selectedConversations = emptySet()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Supprimer")
+                        }
                     }
-                }
-            )
+                )
+            } else {
+                // Normal mode top bar
+                TopAppBar(
+                    title = { Text("Conversations archivées") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Default.ArrowBack, "Retour")
+                        }
+                    }
+                )
+            }
         }
     ) { paddingValues ->
         if (archivedConversations.value.isEmpty()) {
@@ -90,11 +137,28 @@ fun ArchivedConversationsScreen(
                     ArchivedConversationItem(
                         conversation = conversation,
                         userViewModel = userViewModel,
+                        isSelected = selectedConversations.contains(conversation.id),
+                        isSelectionMode = isSelectionMode,
                         onUnarchive = {
                             messageViewModel.archiveConversation(conversation.id, false)
                         },
                         onClick = {
-                            navController.navigate("messages/${conversation.id}")
+                            if (isSelectionMode) {
+                                // Toggle selection
+                                selectedConversations = if (selectedConversations.contains(conversation.id)) {
+                                    selectedConversations - conversation.id
+                                } else {
+                                    selectedConversations + conversation.id
+                                }
+                            } else {
+                                navController.navigate("messages/${conversation.id}")
+                            }
+                        },
+                        onLongClick = {
+                            if (!isSelectionMode) {
+                                isSelectionMode = true
+                                selectedConversations = setOf(conversation.id)
+                            }
                         }
                     )
                     Divider()
@@ -104,12 +168,16 @@ fun ArchivedConversationsScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ArchivedConversationItem(
     conversation: Conversation,
     userViewModel: UserViewModel,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
     onUnarchive: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
 
@@ -135,10 +203,21 @@ fun ArchivedConversationItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Show checkbox in selection mode
+        if (isSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         // Avatar
         if (conversation.isGroup) {
             Icon(
@@ -198,15 +277,17 @@ fun ArchivedConversationItem(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Bouton désarchiver
-                IconButton(
-                    onClick = onUnarchive
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Unarchive,
-                        contentDescription = "Désarchiver",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                // Show unarchive button only when not in selection mode
+                if (!isSelectionMode) {
+                    IconButton(
+                        onClick = onUnarchive
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Unarchive,
+                            contentDescription = "Désarchiver",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }

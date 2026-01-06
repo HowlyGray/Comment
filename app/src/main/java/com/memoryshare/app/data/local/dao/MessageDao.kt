@@ -50,4 +50,12 @@ interface MessageDao {
 
     @Query("UPDATE messages SET isStarred = :isStarred WHERE id IN (:messageIds)")
     suspend fun updateMultipleStarredStatus(messageIds: List<String>, isStarred: Boolean)
+
+    @Query("""
+        SELECT COUNT(*) FROM messages
+        WHERE conversationId IN (
+            SELECT id FROM conversations WHERE archived = 1
+        ) AND isRead = 0
+    """)
+    fun getUnreadArchivedMessagesCount(): Flow<Int>
 }
