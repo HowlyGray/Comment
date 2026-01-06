@@ -132,6 +132,8 @@ class MessageViewModel(
         }
     }
 
+    fun getReactionsForMessage(messageId: String) = repository.getReactionsForMessage(messageId)
+
     // Starred messages methods
     fun getAllStarredMessages() = repository.getAllStarredMessages()
 
