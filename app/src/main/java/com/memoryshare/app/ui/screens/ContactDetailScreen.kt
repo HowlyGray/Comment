@@ -29,6 +29,17 @@ fun ContactDetailScreen(
 ) {
     val user by userViewModel.getUserById(userId).collectAsState(initial = null)
     val currentUser by userViewModel.currentUser.collectAsState()
+    val conversations by messageViewModel.conversations.collectAsState()
+
+    // Find conversation between current user and this contact
+    val conversation = remember(conversations, currentUser, userId) {
+        conversations.firstOrNull { conv ->
+            !conv.isGroup &&
+            conv.participantIds.size == 2 &&
+            conv.participantIds.contains(currentUser?.id) &&
+            conv.participantIds.contains(userId)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -153,7 +164,9 @@ fun ContactDetailScreen(
                         icon = Icons.Default.Image,
                         title = "Médias, liens et documents",
                         onClick = {
-                            // TODO: Naviguer vers l'écran des médias
+                            conversation?.let { conv ->
+                                navController.navigate("conversation_media/${conv.id}")
+                            }
                         }
                     )
                 }
@@ -163,7 +176,9 @@ fun ContactDetailScreen(
                         icon = Icons.Default.Star,
                         title = "Messages importants",
                         onClick = {
-                            // TODO: Naviguer vers les messages starred
+                            conversation?.let { conv ->
+                                navController.navigate("starred_messages/${conv.id}")
+                            }
                         }
                     )
                 }
