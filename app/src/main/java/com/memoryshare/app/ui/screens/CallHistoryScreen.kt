@@ -145,7 +145,7 @@ fun CallHistoryItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = user?.name ?: "Utilisateur",
+                text = user?.displayName ?: "Utilisateur",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )

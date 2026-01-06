@@ -106,6 +106,7 @@ fun AllStarredMessagesScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllStarredMessageItem(
     message: Message,
@@ -130,7 +131,7 @@ fun AllStarredMessageItem(
             // En-tête avec nom de la conversation
             conversation?.let { conv ->
                 Text(
-                    text = if (conv.isGroup) conv.name ?: "Groupe" else sender?.name ?: "Utilisateur",
+                    text = if (conv.isGroup) conv.name ?: "Groupe" else sender?.displayName ?: "Utilisateur",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.primary
@@ -144,7 +145,7 @@ fun AllStarredMessageItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = sender?.name ?: "Utilisateur",
+                    text = sender?.displayName ?: "Utilisateur",
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
                 )
