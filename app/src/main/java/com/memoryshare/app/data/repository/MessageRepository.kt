@@ -196,4 +196,78 @@ class MessageRepository(
     suspend fun archiveConversation(conversationId: String, archived: Boolean) {
         conversationDao.updateArchivedStatus(conversationId, archived)
     }
+
+    suspend fun archiveMultipleConversations(conversationIds: List<String>, archived: Boolean) {
+        conversationDao.updateMultipleArchivedStatus(conversationIds, archived)
+    }
+
+    // Pin conversations
+    suspend fun pinConversation(conversationId: String, pinned: Boolean) {
+        conversationDao.updatePinnedStatus(conversationId, pinned)
+    }
+
+    suspend fun pinMultipleConversations(conversationIds: List<String>, pinned: Boolean) {
+        conversationDao.updateMultiplePinnedStatus(conversationIds, pinned)
+    }
+
+    // Mute conversations
+    suspend fun muteConversation(conversationId: String, muted: Boolean) {
+        conversationDao.updateMutedStatus(conversationId, muted)
+    }
+
+    suspend fun muteMultipleConversations(conversationIds: List<String>, muted: Boolean) {
+        conversationDao.updateMultipleMutedStatus(conversationIds, muted)
+    }
+
+    // Delete multiple conversations
+    suspend fun deleteMultipleConversations(conversationIds: List<String>) {
+        conversationIds.forEach { conversationId ->
+            messageDao.deleteMessagesByConversation(conversationId)
+        }
+        conversationDao.deleteConversations(conversationIds)
+    }
+
+    // Delete multiple messages
+    suspend fun deleteMultipleMessages(messageIds: List<String>) {
+        messageDao.deleteMessages(messageIds)
+    }
+
+    // Star multiple messages
+    suspend fun starMultipleMessages(messageIds: List<String>, starred: Boolean) {
+        messageDao.updateMultipleStarredStatus(messageIds, starred)
+    }
+
+    // Forward messages to another conversation
+    suspend fun forwardMessages(
+        messageIds: List<String>,
+        targetConversationId: String,
+        senderId: String
+    ) {
+        messageIds.forEach { messageId ->
+            val originalMessage = messageDao.getMessageByIdSync(messageId)
+            originalMessage?.let { message ->
+                val forwardedMessage = Message(
+                    id = UUID.randomUUID().toString(),
+                    conversationId = targetConversationId,
+                    senderId = senderId,
+                    content = message.content,
+                    type = message.type,
+                    mediaUrl = message.mediaUrl,
+                    timestamp = System.currentTimeMillis()
+                )
+                messageDao.insertMessage(forwardedMessage)
+
+                // Update target conversation
+                val conversation = conversationDao.getConversationById(targetConversationId).firstOrNull()
+                conversation?.let { conv ->
+                    conversationDao.updateConversation(
+                        conv.copy(
+                            lastMessageText = forwardedMessage.content,
+                            lastMessageTime = forwardedMessage.timestamp
+                        )
+                    )
+                }
+            }
+        }
+    }
 }

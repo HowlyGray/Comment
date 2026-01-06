@@ -14,5 +14,7 @@ data class Conversation(
     val lastMessageTime: Long? = null,
     val imageUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val archived: Boolean = false
+    val archived: Boolean = false,
+    val pinned: Boolean = false,
+    val muted: Boolean = false
 )

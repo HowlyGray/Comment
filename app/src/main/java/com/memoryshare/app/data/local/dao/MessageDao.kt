@@ -30,6 +30,9 @@ interface MessageDao {
     @Delete
     suspend fun deleteMessage(message: Message)
 
+    @Query("DELETE FROM messages WHERE id IN (:messageIds)")
+    suspend fun deleteMessages(messageIds: List<String>)
+
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteMessagesByConversation(conversationId: String)
 
@@ -44,4 +47,7 @@ interface MessageDao {
 
     @Query("UPDATE messages SET isStarred = :isStarred WHERE id = :messageId")
     suspend fun updateStarredStatus(messageId: String, isStarred: Boolean)
+
+    @Query("UPDATE messages SET isStarred = :isStarred WHERE id IN (:messageIds)")
+    suspend fun updateMultipleStarredStatus(messageIds: List<String>, isStarred: Boolean)
 }

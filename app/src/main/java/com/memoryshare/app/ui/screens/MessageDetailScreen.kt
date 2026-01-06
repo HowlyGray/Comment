@@ -54,6 +54,18 @@ fun MessageDetailScreen(
     var showEmojiPicker by remember { mutableStateOf(false) }
     var messageToReact by remember { mutableStateOf<Message?>(null) }
 
+    // États pour le mode sélection multiple
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedMessages by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showForwardDialog by remember { mutableStateOf(false) }
+
+    // Exit selection mode when no items are selected
+    LaunchedEffect(selectedMessages) {
+        if (selectedMessages.isEmpty() && isSelectionMode) {
+            isSelectionMode = false
+        }
+    }
+
     LaunchedEffect(conversationId) {
         viewModel.loadConversation(conversationId)
         viewModel.loadMessages(conversationId)
@@ -87,107 +99,163 @@ fun MessageDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        UserAvatar(user = otherUser, size = 36.dp)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = displayName,
-                                fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            if (otherUser?.bio != null) {
-                                Text(
-                                    text = otherUser.bio,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+            if (isSelectionMode) {
+                // Selection mode top bar
+                TopAppBar(
+                    title = { Text("${selectedMessages.size} sélectionné(s)") },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            isSelectionMode = false
+                            selectedMessages = emptySet()
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "Annuler")
+                        }
+                    },
+                    actions = {
+                        // Reply button (only if one message selected)
+                        if (selectedMessages.size == 1) {
+                            IconButton(onClick = {
+                                val msg = messages.find { it.id == selectedMessages.first() }
+                                msg?.let {
+                                    replyingToMessage = it
+                                    isSelectionMode = false
+                                    selectedMessages = emptySet()
+                                }
+                            }) {
+                                Icon(Icons.Default.Reply, contentDescription = "Répondre")
                             }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Video call */ }) {
-                        Icon(Icons.Default.Videocam, contentDescription = "Appel vidéo")
-                    }
-                    IconButton(onClick = { /* Voice call */ }) {
-                        Icon(Icons.Default.Call, contentDescription = "Appel vocal")
-                    }
-                    IconButton(onClick = { showOptionsMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Plus")
-                    }
 
-                    DropdownMenu(
-                        expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Afficher le contact") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Navigate to contact profile
-                            },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Recherche") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Search in conversation
-                            },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Médias, liens et documents") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Show media gallery
-                            },
-                            leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Thème de la discussion") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Change theme
-                            },
-                            leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null) }
-                        )
-                        Divider()
-                        DropdownMenuItem(
-                            text = { Text("Signaler") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Report conversation
-                            },
-                            leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Bloquer") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Block contact
-                            },
-                            leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Effacer le contenu") },
-                            onClick = {
-                                showOptionsMenu = false
-                                // TODO: Clear conversation
-                            },
-                            leadingIcon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) }
-                        )
+                        // Star button
+                        IconButton(onClick = {
+                            viewModel.starMultipleMessages(selectedMessages.toList(), true)
+                            isSelectionMode = false
+                            selectedMessages = emptySet()
+                        }) {
+                            Icon(Icons.Default.Star, contentDescription = "Important")
+                        }
+
+                        // Forward button
+                        IconButton(onClick = {
+                            showForwardDialog = true
+                        }) {
+                            Icon(Icons.Default.Forward, contentDescription = "Transférer")
+                        }
+
+                        // Delete button
+                        IconButton(onClick = {
+                            viewModel.deleteMultipleMessages(selectedMessages.toList())
+                            isSelectionMode = false
+                            selectedMessages = emptySet()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Supprimer")
+                        }
                     }
-                }
-            )
+                )
+            } else {
+                // Normal mode top bar
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            UserAvatar(user = otherUser, size = 36.dp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = displayName,
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                if (otherUser?.bio != null) {
+                                    Text(
+                                        text = otherUser.bio,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { /* Video call */ }) {
+                            Icon(Icons.Default.Videocam, contentDescription = "Appel vidéo")
+                        }
+                        IconButton(onClick = { /* Voice call */ }) {
+                            Icon(Icons.Default.Call, contentDescription = "Appel vocal")
+                        }
+                        IconButton(onClick = { showOptionsMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Plus")
+                        }
+
+                        DropdownMenu(
+                            expanded = showOptionsMenu,
+                            onDismissRequest = { showOptionsMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Afficher le contact") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Navigate to contact profile
+                                },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Recherche") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Search in conversation
+                                },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Médias, liens et documents") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Show media gallery
+                                },
+                                leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Thème de la discussion") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Change theme
+                                },
+                                leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null) }
+                            )
+                            Divider()
+                            DropdownMenuItem(
+                                text = { Text("Signaler") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Report conversation
+                                },
+                                leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Bloquer") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Block contact
+                                },
+                                leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Effacer le contenu") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    // TODO: Clear conversation
+                                },
+                                leadingIcon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) }
+                            )
+                        }
+                    }
+                )
+            }
         },
         bottomBar = {
             Surface(
@@ -384,9 +452,26 @@ fun MessageDetailScreen(
                         isFromCurrentUser = message.senderId == currentUser?.id,
                         currentUser = currentUser,
                         allUsers = allUsers,
+                        isSelected = selectedMessages.contains(message.id),
+                        isSelectionMode = isSelectionMode,
+                        onClick = {
+                            if (isSelectionMode) {
+                                // Toggle selection
+                                selectedMessages = if (selectedMessages.contains(message.id)) {
+                                    selectedMessages - message.id
+                                } else {
+                                    selectedMessages + message.id
+                                }
+                            }
+                        },
                         onLongPress = {
-                            selectedMessage = message
-                            showMessageOptionsMenu = true
+                            if (!isSelectionMode) {
+                                isSelectionMode = true
+                                selectedMessages = setOf(message.id)
+                            } else {
+                                selectedMessage = message
+                                showMessageOptionsMenu = true
+                            }
                         },
                         onReactionClick = {
                             messageToReact = message
@@ -624,6 +709,9 @@ fun MessageBubble(
     isFromCurrentUser: Boolean,
     currentUser: User?,
     allUsers: List<User>,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
+    onClick: () -> Unit = {},
     onLongPress: () -> Unit,
     onReactionClick: () -> Unit
 ) {
@@ -633,6 +721,16 @@ fun MessageBubble(
             .padding(vertical = 4.dp),
         horizontalArrangement = if (isFromCurrentUser) Arrangement.End else Arrangement.Start
     ) {
+        // Show checkbox in selection mode (on the left for all messages)
+        if (isSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onClick() },
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        }
+
         if (!isFromCurrentUser) {
             val sender = allUsers.find { it.id == message.senderId }
             UserAvatar(user = sender, size = 32.dp)
@@ -672,7 +770,7 @@ fun MessageBubble(
 
             Surface(
                 modifier = Modifier.combinedClickable(
-                    onClick = {},
+                    onClick = if (isSelectionMode) onClick else {},
                     onLongClick = onLongPress
                 ),
                 shape = RoundedCornerShape(
@@ -681,7 +779,9 @@ fun MessageBubble(
                     bottomStart = if (isFromCurrentUser) 16.dp else 4.dp,
                     bottomEnd = if (isFromCurrentUser) 4.dp else 16.dp
                 ),
-                color = if (isFromCurrentUser) {
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else if (isFromCurrentUser) {
                     MaterialTheme.colorScheme.primaryContainer
                 } else {
                     MaterialTheme.colorScheme.surfaceVariant
