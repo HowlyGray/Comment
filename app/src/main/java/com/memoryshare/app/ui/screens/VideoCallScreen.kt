@@ -65,7 +65,7 @@ fun VideoCallScreen(
                             size = 120.dp
                         )
                         Text(
-                            text = currentUser.name,
+                            text = currentUser.displayName,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
