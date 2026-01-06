@@ -1,5 +1,8 @@
 package com.memoryshare.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -94,7 +97,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.SelectContact.route) {
+        composable(
+            route = Screen.SelectContact.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             SelectContactScreen(
                 userViewModel = userViewModel,
                 currentUser = currentUser,
@@ -123,7 +132,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.CreateGroup.route) {
+        composable(
+            route = Screen.CreateGroup.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             CreateGroupScreen(
                 userViewModel = userViewModel,
                 currentUser = currentUser,
@@ -147,7 +162,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.AddContact.route) {
+        composable(
+            route = Screen.AddContact.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             AddContactScreen(
                 userViewModel = userViewModel,
                 onContactAdded = {
@@ -159,7 +180,11 @@ fun AppNavigation(
 
         composable(
             route = Screen.MessageDetail.route,
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
             MessageDetailScreen(
@@ -198,7 +223,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.CreatePost.route) {
+        composable(
+            route = Screen.CreatePost.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             CreatePostScreen(
                 viewModel = postViewModel,
                 currentUser = currentUser,
@@ -211,7 +242,11 @@ fun AppNavigation(
 
         composable(
             route = Screen.PostDetail.route,
-            arguments = listOf(navArgument("postId") { type = NavType.StringType })
+            arguments = listOf(navArgument("postId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val postId = backStackEntry.arguments?.getString("postId") ?: return@composable
             PostDetailScreen(
@@ -247,7 +282,11 @@ fun AppNavigation(
 
         composable(
             route = Screen.MemorySpace.route,
-            arguments = listOf(navArgument("spaceId") { type = NavType.StringType })
+            arguments = listOf(navArgument("spaceId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val spaceId = backStackEntry.arguments?.getString("spaceId") ?: return@composable
             MemorySpaceScreen(
@@ -264,7 +303,11 @@ fun AppNavigation(
 
         composable(
             route = Screen.AddMedia.route,
-            arguments = listOf(navArgument("spaceId") { type = NavType.StringType })
+            arguments = listOf(navArgument("spaceId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val spaceId = backStackEntry.arguments?.getString("spaceId") ?: return@composable
             AddMediaScreen(
@@ -301,7 +344,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.Settings.route) {
+        composable(
+            route = Screen.Settings.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             SettingsScreen(
                 preferencesViewModel = preferencesViewModel,
                 onNavigateToProfile = {
@@ -320,7 +369,11 @@ fun AppNavigation(
         // Écrans d'appels
         composable(
             route = Screen.Call.route,
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             CallScreen(
@@ -333,7 +386,11 @@ fun AppNavigation(
 
         composable(
             route = Screen.VideoCall.route,
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             VideoCallScreen(
@@ -344,7 +401,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.CallHistory.route) {
+        composable(
+            route = Screen.CallHistory.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             CallHistoryScreen(
                 navController = navController,
                 callViewModel = callViewModel,
@@ -355,7 +418,11 @@ fun AppNavigation(
         // Écrans de contact et médias
         composable(
             route = Screen.ContactDetail.route,
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             ContactDetailScreen(
@@ -369,7 +436,11 @@ fun AppNavigation(
 
         composable(
             route = Screen.ConversationMedia.route,
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
             ConversationMediaScreen(
@@ -382,7 +453,11 @@ fun AppNavigation(
         // Écrans de messages importants
         composable(
             route = Screen.StarredMessages.route,
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
         ) { backStackEntry ->
             val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
             StarredMessagesScreen(
@@ -393,7 +468,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.AllStarredMessages.route) {
+        composable(
+            route = Screen.AllStarredMessages.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             AllStarredMessagesScreen(
                 navController = navController,
                 messageViewModel = messageViewModel,
@@ -402,7 +483,13 @@ fun AppNavigation(
         }
 
         // Conversations archivées
-        composable(Screen.ArchivedConversations.route) {
+        composable(
+            route = Screen.ArchivedConversations.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             ArchivedConversationsScreen(
                 navController = navController,
                 messageViewModel = messageViewModel,
@@ -411,7 +498,13 @@ fun AppNavigation(
         }
 
         // Caméra
-        composable(Screen.Camera.route) {
+        composable(
+            route = Screen.Camera.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
             CameraScreen(
                 navController = navController,
                 onPhotoCaptured = { photoPath ->
