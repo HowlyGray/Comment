@@ -63,7 +63,7 @@ fun ForwardMessagesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Transférer ${messagesToForward.size} message(s)") },
+                title = { Text("Transférer ${messageIds.size} message(s)") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, "Retour")
