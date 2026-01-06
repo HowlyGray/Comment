@@ -36,7 +36,10 @@ fun MessageDetailScreen(
     viewModel: MessageViewModel,
     userViewModel: UserViewModel,
     currentUser: User?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToContactDetail: (String) -> Unit = {},
+    onNavigateToVideoCall: (String) -> Unit = {},
+    onNavigateToVoiceCall: (String) -> Unit = {}
 ) {
     val messages by viewModel.currentMessages.collectAsState()
     val conversation by viewModel.currentConversation.collectAsState()
@@ -156,7 +159,15 @@ fun MessageDetailScreen(
                 // Normal mode top bar
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                // Navigate to contact detail (only for 1-to-1 conversations)
+                                otherUser?.let { user ->
+                                    onNavigateToContactDetail(user.id)
+                                }
+                            }
+                        ) {
                             UserAvatar(user = otherUser, size = 36.dp)
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
@@ -181,10 +192,18 @@ fun MessageDetailScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* Video call */ }) {
+                        IconButton(onClick = {
+                            otherUser?.let { user ->
+                                onNavigateToVideoCall(user.id)
+                            }
+                        }) {
                             Icon(Icons.Default.Videocam, contentDescription = "Appel vidéo")
                         }
-                        IconButton(onClick = { /* Voice call */ }) {
+                        IconButton(onClick = {
+                            otherUser?.let { user ->
+                                onNavigateToVoiceCall(user.id)
+                            }
+                        }) {
                             Icon(Icons.Default.Call, contentDescription = "Appel vocal")
                         }
                         IconButton(onClick = { showOptionsMenu = true }) {
@@ -199,7 +218,9 @@ fun MessageDetailScreen(
                                 text = { Text("Afficher le contact") },
                                 onClick = {
                                     showOptionsMenu = false
-                                    // TODO: Navigate to contact profile
+                                    otherUser?.let { user ->
+                                        onNavigateToContactDetail(user.id)
+                                    }
                                 },
                                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
                             )

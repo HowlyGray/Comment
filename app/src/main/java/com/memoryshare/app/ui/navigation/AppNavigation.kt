@@ -192,7 +192,16 @@ fun AppNavigation(
                 viewModel = messageViewModel,
                 userViewModel = userViewModel,
                 currentUser = currentUser,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToContactDetail = { userId ->
+                    navController.navigate(Screen.ContactDetail.createRoute(userId))
+                },
+                onNavigateToVideoCall = { userId ->
+                    navController.navigate(Screen.VideoCall.createRoute(userId))
+                },
+                onNavigateToVoiceCall = { userId ->
+                    navController.navigate(Screen.Call.createRoute(userId))
+                }
             )
         }
 
