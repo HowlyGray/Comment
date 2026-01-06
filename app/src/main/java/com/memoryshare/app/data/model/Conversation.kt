@@ -16,5 +16,6 @@ data class Conversation(
     val createdAt: Long = System.currentTimeMillis(),
     val archived: Boolean = false,
     val pinned: Boolean = false,
+    val pinnedAt: Long? = null, // Timestamp quand la conversation a été épinglée
     val muted: Boolean = false
 )

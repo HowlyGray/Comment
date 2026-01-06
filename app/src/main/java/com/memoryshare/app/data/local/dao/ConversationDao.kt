@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ConversationDao {
-    @Query("SELECT * FROM conversations WHERE archived = 0 ORDER BY pinned DESC, lastMessageTime DESC")
+    @Query("SELECT * FROM conversations WHERE archived = 0 ORDER BY pinned DESC, pinnedAt DESC, lastMessageTime DESC")
     fun getAllConversations(): Flow<List<Conversation>>
 
     @Query("SELECT * FROM conversations WHERE archived = 1 ORDER BY lastMessageTime DESC")
@@ -39,11 +39,11 @@ interface ConversationDao {
     @Query("UPDATE conversations SET archived = :archived WHERE id IN (:conversationIds)")
     suspend fun updateMultipleArchivedStatus(conversationIds: List<String>, archived: Boolean)
 
-    @Query("UPDATE conversations SET pinned = :pinned WHERE id = :conversationId")
-    suspend fun updatePinnedStatus(conversationId: String, pinned: Boolean)
+    @Query("UPDATE conversations SET pinned = :pinned, pinnedAt = :pinnedAt WHERE id = :conversationId")
+    suspend fun updatePinnedStatus(conversationId: String, pinned: Boolean, pinnedAt: Long?)
 
-    @Query("UPDATE conversations SET pinned = :pinned WHERE id IN (:conversationIds)")
-    suspend fun updateMultiplePinnedStatus(conversationIds: List<String>, pinned: Boolean)
+    @Query("UPDATE conversations SET pinned = :pinned, pinnedAt = :pinnedAt WHERE id IN (:conversationIds)")
+    suspend fun updateMultiplePinnedStatus(conversationIds: List<String>, pinned: Boolean, pinnedAt: Long?)
 
     @Query("UPDATE conversations SET muted = :muted WHERE id = :conversationId")
     suspend fun updateMutedStatus(conversationId: String, muted: Boolean)
