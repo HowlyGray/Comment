@@ -29,7 +29,7 @@ fun VideoCallScreen(
     callViewModel: CallViewModel,
     userViewModel: UserViewModel
 ) {
-    val user by userViewModel.getUserByIdFlow(userId).collectAsState(initial = null)
+    val user by userViewModel.getUserById(userId).collectAsState(initial = null)
     val isMuted by callViewModel.isMuted.collectAsState()
     val isVideoEnabled by callViewModel.isVideoEnabled.collectAsState()
     val callDuration by callViewModel.callDuration.collectAsState()

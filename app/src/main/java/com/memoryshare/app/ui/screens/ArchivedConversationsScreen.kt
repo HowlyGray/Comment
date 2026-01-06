@@ -34,7 +34,7 @@ fun ArchivedConversationsScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        messageViewModel.repository.getArchivedConversations().collect { conversations ->
+        messageViewModel.getArchivedConversations().collect { conversations ->
             archivedConversations.value = conversations
         }
     }
@@ -91,9 +91,7 @@ fun ArchivedConversationsScreen(
                         conversation = conversation,
                         userViewModel = userViewModel,
                         onUnarchive = {
-                            scope.launch {
-                                messageViewModel.repository.archiveConversation(conversation.id, false)
-                            }
+                            messageViewModel.archiveConversation(conversation.id, false)
                         },
                         onClick = {
                             navController.navigate("messages/${conversation.id}")
@@ -120,7 +118,7 @@ fun ArchivedConversationItem(
         conversation.participantIds.firstOrNull { it != currentUser?.id }
     } else null
 
-    val otherUser by userViewModel.getUserByIdFlow(otherUserId ?: "").collectAsState(initial = null)
+    val otherUser by userViewModel.getUserById(otherUserId ?: "").collectAsState(initial = null)
 
     val displayName = if (conversation.isGroup) {
         conversation.name ?: "Groupe"

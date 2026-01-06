@@ -27,7 +27,7 @@ fun ContactDetailScreen(
     messageViewModel: MessageViewModel,
     callViewModel: CallViewModel
 ) {
-    val user by userViewModel.getUserByIdFlow(userId).collectAsState(initial = null)
+    val user by userViewModel.getUserById(userId).collectAsState(initial = null)
     val currentUser by userViewModel.currentUser.collectAsState()
 
     Scaffold(
@@ -149,7 +149,7 @@ fun ContactDetailScreen(
 
                 // Liste des options
                 item {
-                    ContactOption(
+                    ContactDetailOption(
                         icon = Icons.Default.Image,
                         title = "Médias, liens et documents",
                         onClick = {
@@ -159,7 +159,7 @@ fun ContactDetailScreen(
                 }
 
                 item {
-                    ContactOption(
+                    ContactDetailOption(
                         icon = Icons.Default.Star,
                         title = "Messages importants",
                         onClick = {
@@ -169,7 +169,7 @@ fun ContactDetailScreen(
                 }
 
                 item {
-                    ContactOption(
+                    ContactDetailOption(
                         icon = Icons.Default.History,
                         title = "Historique des appels",
                         onClick = {
@@ -179,7 +179,7 @@ fun ContactDetailScreen(
                 }
 
                 item {
-                    ContactOption(
+                    ContactDetailOption(
                         icon = Icons.Default.Notifications,
                         title = "Notifications",
                         onClick = {
@@ -189,7 +189,7 @@ fun ContactDetailScreen(
                 }
 
                 item {
-                    ContactOption(
+                    ContactDetailOption(
                         icon = Icons.Default.Block,
                         title = "Bloquer ce contact",
                         isDestructive = true,
@@ -204,7 +204,7 @@ fun ContactDetailScreen(
 }
 
 @Composable
-fun ContactOption(
+fun ContactDetailOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     isDestructive: Boolean = false,

@@ -28,7 +28,7 @@ fun CallScreen(
     callViewModel: CallViewModel,
     userViewModel: UserViewModel
 ) {
-    val user by userViewModel.getUserByIdFlow(userId).collectAsState(initial = null)
+    val user by userViewModel.getUserById(userId).collectAsState(initial = null)
     val isMuted by callViewModel.isMuted.collectAsState()
     val isSpeakerOn by callViewModel.isSpeakerOn.collectAsState()
     val callDuration by callViewModel.callDuration.collectAsState()

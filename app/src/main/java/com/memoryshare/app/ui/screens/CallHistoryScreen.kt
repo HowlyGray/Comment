@@ -119,7 +119,7 @@ fun CallHistoryItem(
     onCallClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    val user by userViewModel.getUserByIdFlow(call.userId).collectAsState(initial = null)
+    val user by userViewModel.getUserById(call.userId).collectAsState(initial = null)
 
     Row(
         modifier = Modifier

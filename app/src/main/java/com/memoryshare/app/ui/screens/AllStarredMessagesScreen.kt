@@ -32,7 +32,7 @@ fun AllStarredMessagesScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        messageViewModel.repository.getAllStarredMessages().collect { messages ->
+        messageViewModel.getAllStarredMessages().collect { messages ->
             allStarredMessages.value = messages
         }
     }
@@ -93,9 +93,7 @@ fun AllStarredMessagesScreen(
                         userViewModel = userViewModel,
                         messageViewModel = messageViewModel,
                         onUnstar = {
-                            scope.launch {
-                                messageViewModel.repository.toggleStarredStatus(message.id, false)
-                            }
+                            messageViewModel.toggleStarredStatus(message.id, false)
                         },
                         onClick = {
                             // Naviguer vers la conversation
@@ -116,8 +114,8 @@ fun AllStarredMessageItem(
     onUnstar: () -> Unit,
     onClick: () -> Unit
 ) {
-    val sender by userViewModel.getUserByIdFlow(message.senderId).collectAsState(initial = null)
-    val conversation by messageViewModel.repository.getConversationById(message.conversationId).collectAsState(initial = null)
+    val sender by userViewModel.getUserById(message.senderId).collectAsState(initial = null)
+    val conversation by messageViewModel.getConversationById(message.conversationId).collectAsState(initial = null)
 
     Card(
         onClick = onClick,
