@@ -1,5 +1,6 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -18,7 +19,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
-import com.memoryshare.app.ui.components.MediaItem
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -117,13 +117,37 @@ fun MediaGrid(messages: List<Message>) {
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items(messages) { message ->
-                MediaItem(
-                    mediaUrl = message.mediaUrl ?: "",
-                    isVideo = message.type == MessageType.VIDEO,
-                    onClick = {
-                        // TODO: Ouvrir le média en plein écran
+                Box(
+                    modifier = Modifier.aspectRatio(1f)
+                ) {
+                    coil.compose.AsyncImage(
+                        model = message.mediaThumbnailUrl ?: message.mediaUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable {
+                                // TODO: Ouvrir le média en plein écran
+                            },
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+
+                    if (message.type == MessageType.VIDEO) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(48.dp),
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Lecture",
+                                tint = androidx.compose.ui.graphics.Color.White,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }

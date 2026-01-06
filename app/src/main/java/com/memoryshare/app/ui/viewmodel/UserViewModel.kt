@@ -149,4 +149,7 @@ class UserViewModel(
             }
         }
     }
+
+    // Get user by ID as Flow
+    fun getUserById(userId: String) = repository.getUserById(userId)
 }

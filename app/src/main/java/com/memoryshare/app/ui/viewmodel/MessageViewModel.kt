@@ -131,4 +131,28 @@ class MessageViewModel(
             repository.addReaction(messageId, userId, emoji)
         }
     }
+
+    // Starred messages methods
+    fun getAllStarredMessages() = repository.getAllStarredMessages()
+
+    fun getStarredMessagesByConversation(conversationId: String) =
+        repository.getStarredMessagesByConversation(conversationId)
+
+    fun toggleStarredStatus(messageId: String, isStarred: Boolean) {
+        viewModelScope.launch {
+            repository.toggleStarredStatus(messageId, isStarred)
+        }
+    }
+
+    // Archived conversations methods
+    fun getArchivedConversations() = repository.getArchivedConversations()
+
+    fun archiveConversation(conversationId: String, archived: Boolean) {
+        viewModelScope.launch {
+            repository.archiveConversation(conversationId, archived)
+        }
+    }
+
+    // Conversation by ID
+    fun getConversationById(conversationId: String) = repository.getConversationById(conversationId)
 }

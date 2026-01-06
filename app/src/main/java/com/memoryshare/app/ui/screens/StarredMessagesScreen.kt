@@ -33,7 +33,7 @@ fun StarredMessagesScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(conversationId) {
-        messageViewModel.repository.getStarredMessagesByConversation(conversationId).collect { messages ->
+        messageViewModel.getStarredMessagesByConversation(conversationId).collect { messages ->
             starredMessages.value = messages
         }
     }
@@ -93,9 +93,7 @@ fun StarredMessagesScreen(
                         message = message,
                         userViewModel = userViewModel,
                         onUnstar = {
-                            scope.launch {
-                                messageViewModel.repository.toggleStarredStatus(message.id, false)
-                            }
+                            messageViewModel.toggleStarredStatus(message.id, false)
                         }
                     )
                 }
@@ -110,7 +108,7 @@ fun StarredMessageItem(
     userViewModel: UserViewModel,
     onUnstar: () -> Unit
 ) {
-    val sender by userViewModel.getUserByIdFlow(message.senderId).collectAsState(initial = null)
+    val sender by userViewModel.getUserById(message.senderId).collectAsState(initial = null)
 
     Card(
         modifier = Modifier.fillMaxWidth()
