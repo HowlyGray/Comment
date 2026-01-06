@@ -153,6 +153,66 @@ class MessageViewModel(
         }
     }
 
+    fun archiveMultipleConversations(conversationIds: List<String>, archived: Boolean) {
+        viewModelScope.launch {
+            repository.archiveMultipleConversations(conversationIds, archived)
+        }
+    }
+
+    // Pin conversations methods
+    fun pinConversation(conversationId: String, pinned: Boolean) {
+        viewModelScope.launch {
+            repository.pinConversation(conversationId, pinned)
+        }
+    }
+
+    fun pinMultipleConversations(conversationIds: List<String>, pinned: Boolean) {
+        viewModelScope.launch {
+            repository.pinMultipleConversations(conversationIds, pinned)
+        }
+    }
+
+    // Mute conversations methods
+    fun muteConversation(conversationId: String, muted: Boolean) {
+        viewModelScope.launch {
+            repository.muteConversation(conversationId, muted)
+        }
+    }
+
+    fun muteMultipleConversations(conversationIds: List<String>, muted: Boolean) {
+        viewModelScope.launch {
+            repository.muteMultipleConversations(conversationIds, muted)
+        }
+    }
+
+    // Delete multiple conversations
+    fun deleteMultipleConversations(conversationIds: List<String>) {
+        viewModelScope.launch {
+            repository.deleteMultipleConversations(conversationIds)
+        }
+    }
+
+    // Delete multiple messages
+    fun deleteMultipleMessages(messageIds: List<String>) {
+        viewModelScope.launch {
+            repository.deleteMultipleMessages(messageIds)
+        }
+    }
+
+    // Star multiple messages
+    fun starMultipleMessages(messageIds: List<String>, starred: Boolean) {
+        viewModelScope.launch {
+            repository.starMultipleMessages(messageIds, starred)
+        }
+    }
+
+    // Forward messages
+    fun forwardMessages(messageIds: List<String>, targetConversationId: String, senderId: String) {
+        viewModelScope.launch {
+            repository.forwardMessages(messageIds, targetConversationId, senderId)
+        }
+    }
+
     // Conversation by ID
     fun getConversationById(conversationId: String) = repository.getConversationById(conversationId)
 }
