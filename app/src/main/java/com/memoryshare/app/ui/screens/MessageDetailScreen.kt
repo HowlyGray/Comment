@@ -770,7 +770,7 @@ fun MessageBubble(
 
             Surface(
                 modifier = Modifier.combinedClickable(
-                    onClick = if (isSelectionMode) onClick else {},
+                    onClick = { if (isSelectionMode) onClick() },
                     onLongClick = onLongPress
                 ),
                 shape = RoundedCornerShape(
