@@ -54,6 +54,11 @@ fun MessagesScreen(
         }
     }
 
+    // Calculer l'état des conversations sélectionnées
+    val selectedConvs = conversations.filter { selectedConversations.contains(it.id) }
+    val allPinned = selectedConvs.isNotEmpty() && selectedConvs.all { it.pinned }
+    val allMuted = selectedConvs.isNotEmpty() && selectedConvs.all { it.muted }
+
     Scaffold(
         topBar = {
             if (isSelectionMode) {
@@ -69,22 +74,41 @@ fun MessagesScreen(
                         }
                     },
                     actions = {
-                        // Pin button
+                        // Pin/Unpin toggle button
                         IconButton(onClick = {
-                            viewModel.pinMultipleConversations(selectedConversations.toList(), true)
+                            if (allPinned) {
+                                // Unpin all
+                                viewModel.pinMultipleConversations(selectedConversations.toList(), false)
+                            } else {
+                                // Pin all
+                                viewModel.pinMultipleConversations(selectedConversations.toList(), true)
+                            }
                             isSelectionMode = false
                             selectedConversations = emptySet()
                         }) {
-                            Icon(Icons.Default.PushPin, contentDescription = "Épingler")
+                            Icon(
+                                imageVector = if (allPinned) Icons.Default.PushPin else Icons.Default.PushPin,
+                                contentDescription = if (allPinned) "Désépingler" else "Épingler",
+                                tint = if (allPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
                         }
 
-                        // Mute button
+                        // Mute/Unmute toggle button
                         IconButton(onClick = {
-                            viewModel.muteMultipleConversations(selectedConversations.toList(), true)
+                            if (allMuted) {
+                                // Unmute all
+                                viewModel.muteMultipleConversations(selectedConversations.toList(), false)
+                            } else {
+                                // Mute all
+                                viewModel.muteMultipleConversations(selectedConversations.toList(), true)
+                            }
                             isSelectionMode = false
                             selectedConversations = emptySet()
                         }) {
-                            Icon(Icons.Default.VolumeOff, contentDescription = "Mettre en sourdine")
+                            Icon(
+                                imageVector = if (allMuted) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                contentDescription = if (allMuted) "Réactiver le son" else "Mettre en sourdine"
+                            )
                         }
 
                         // Archive button

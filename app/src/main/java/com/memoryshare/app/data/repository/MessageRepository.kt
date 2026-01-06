@@ -203,11 +203,13 @@ class MessageRepository(
 
     // Pin conversations
     suspend fun pinConversation(conversationId: String, pinned: Boolean) {
-        conversationDao.updatePinnedStatus(conversationId, pinned)
+        val pinnedAt = if (pinned) System.currentTimeMillis() else null
+        conversationDao.updatePinnedStatus(conversationId, pinned, pinnedAt)
     }
 
     suspend fun pinMultipleConversations(conversationIds: List<String>, pinned: Boolean) {
-        conversationDao.updateMultiplePinnedStatus(conversationIds, pinned)
+        val pinnedAt = if (pinned) System.currentTimeMillis() else null
+        conversationDao.updateMultiplePinnedStatus(conversationIds, pinned, pinnedAt)
     }
 
     // Mute conversations
