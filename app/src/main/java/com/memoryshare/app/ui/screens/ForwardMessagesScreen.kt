@@ -32,13 +32,7 @@ fun ForwardMessagesScreen(
     val currentUser by userViewModel.currentUser.collectAsState()
     val conversations by messageViewModel.conversations.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
-    val messages by messageViewModel.messages.collectAsState()
     val messageIds by messageViewModel.messagesToForward.collectAsState()
-
-    // Filter messages to forward
-    val messagesToForward = remember(messages, messageIds) {
-        messages.filter { messageIds.contains(it.id) }
-    }
 
     // Recent conversations (excluding group chats for simplicity)
     val recentConversations = remember(conversations, currentUser) {
