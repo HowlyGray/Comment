@@ -2,6 +2,7 @@ package com.memoryshare.app.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,7 +40,8 @@ fun MessageDetailScreen(
     onBack: () -> Unit,
     onNavigateToContactDetail: (String) -> Unit = {},
     onNavigateToVideoCall: (String) -> Unit = {},
-    onNavigateToVoiceCall: (String) -> Unit = {}
+    onNavigateToVoiceCall: (String) -> Unit = {},
+    onNavigateToForward: () -> Unit
 ) {
     val messages by viewModel.currentMessages.collectAsState()
     val conversation by viewModel.currentConversation.collectAsState()
@@ -150,7 +152,7 @@ fun MessageDetailScreen(
                         IconButton(onClick = {
                             // Store selected message IDs in ViewModel for ForwardMessagesScreen
                             viewModel.setMessagesToForward(selectedMessages.toList())
-                            navController.navigate("forward_messages")
+                            onNavigateToForward()
                             isSelectionMode = false
                             selectedMessages = emptySet()
                         }) {

@@ -32,6 +32,7 @@ fun ForwardMessagesScreen(
     val currentUser by userViewModel.currentUser.collectAsState()
     val conversations by messageViewModel.conversations.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
+    val messages by messageViewModel.currentMessages.collectAsState()
     val messageIds by messageViewModel.messagesToForward.collectAsState()
 
     // Recent conversations (excluding group chats for simplicity)

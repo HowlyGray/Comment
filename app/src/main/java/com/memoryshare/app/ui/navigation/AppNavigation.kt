@@ -201,7 +201,8 @@ fun AppNavigation(
                 },
                 onNavigateToVoiceCall = { userId ->
                     navController.navigate(Screen.Call.createRoute(userId))
-                }
+                },
+                onNavigateToForward = { navController.navigate(Screen.ForwardMessages.route) }
             )
         }
 
