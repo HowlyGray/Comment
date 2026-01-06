@@ -68,7 +68,7 @@ fun CallScreen(
                     )
 
                     Text(
-                        text = currentUser.name,
+                        text = currentUser.displayName,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface

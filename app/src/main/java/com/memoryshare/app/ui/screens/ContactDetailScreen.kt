@@ -63,13 +63,13 @@ fun ContactDetailScreen(
                         )
 
                         Text(
-                            text = contact.name,
+                            text = contact.displayName,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
 
                         Text(
-                            text = "@${contact.name.lowercase().replace(" ", "")}",
+                            text = "@${contact.displayName.lowercase().replace(" ", "")}",
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
