@@ -178,4 +178,22 @@ class MessageRepository(
     suspend fun removeReaction(messageId: String, userId: String) {
         messageReactionDao.deleteUserReaction(messageId, userId)
     }
+
+    // Starred messages
+    fun getAllStarredMessages(): Flow<List<Message>> = messageDao.getAllStarredMessages()
+
+    fun getStarredMessagesByConversation(conversationId: String): Flow<List<Message>> =
+        messageDao.getStarredMessagesByConversation(conversationId)
+
+    suspend fun toggleStarredStatus(messageId: String, isStarred: Boolean) {
+        messageDao.updateStarredStatus(messageId, isStarred)
+    }
+
+    // Archived conversations
+    fun getArchivedConversations(): Flow<List<Conversation>> =
+        conversationDao.getArchivedConversations()
+
+    suspend fun archiveConversation(conversationId: String, archived: Boolean) {
+        conversationDao.updateArchivedStatus(conversationId, archived)
+    }
 }

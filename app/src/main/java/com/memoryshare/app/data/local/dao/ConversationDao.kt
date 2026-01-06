@@ -6,8 +6,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ConversationDao {
-    @Query("SELECT * FROM conversations ORDER BY lastMessageTime DESC")
+    @Query("SELECT * FROM conversations WHERE archived = 0 ORDER BY lastMessageTime DESC")
     fun getAllConversations(): Flow<List<Conversation>>
+
+    @Query("SELECT * FROM conversations WHERE archived = 1 ORDER BY lastMessageTime DESC")
+    fun getArchivedConversations(): Flow<List<Conversation>>
 
     @Query("SELECT * FROM conversations WHERE id = :conversationId")
     fun getConversationById(conversationId: String): Flow<Conversation?>
@@ -26,4 +29,7 @@ interface ConversationDao {
 
     @Query("DELETE FROM conversations")
     suspend fun deleteAllConversations()
+
+    @Query("UPDATE conversations SET archived = :archived WHERE id = :conversationId")
+    suspend fun updateArchivedStatus(conversationId: String, archived: Boolean)
 }

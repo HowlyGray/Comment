@@ -21,6 +21,7 @@ data class Message(
     val type: MessageType = MessageType.TEXT,
     val timestamp: Long = System.currentTimeMillis(),
     val isRead: Boolean = false,
+    val isStarred: Boolean = false, // Message marqué comme important
     val mediaUrl: String? = null,
     val mediaThumbnailUrl: String? = null,
     val mediaDuration: Long? = null, // Pour audio/vidéo en millisecondes

@@ -22,9 +22,10 @@ import com.memoryshare.app.data.model.*
         Media::class,
         MediaComment::class,
         Comment::class,
-        SharedSpacePermission::class
+        SharedSpacePermission::class,
+        Call::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -42,6 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mediaCommentDao(): MediaCommentDao
     abstract fun commentDao(): CommentDao
     abstract fun sharedSpacePermissionDao(): SharedSpacePermissionDao
+    abstract fun callDao(): CallDao
 
     companion object {
         @Volatile

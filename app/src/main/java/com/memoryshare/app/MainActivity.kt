@@ -13,12 +13,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.memoryshare.app.data.local.AppDatabase
 import com.memoryshare.app.data.local.PreferencesManager
+import com.memoryshare.app.data.repository.CallRepository
 import com.memoryshare.app.data.repository.MessageRepository
 import com.memoryshare.app.data.repository.PostRepository
 import com.memoryshare.app.data.repository.SharedSpaceRepository
 import com.memoryshare.app.data.repository.UserRepository
 import com.memoryshare.app.ui.navigation.AppNavigation
 import com.memoryshare.app.ui.theme.MemoryShareTheme
+import com.memoryshare.app.ui.viewmodel.CallViewModel
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
@@ -55,6 +57,9 @@ class MainActivity : ComponentActivity() {
             database.mediaDao(),
             database.sharedSpacePermissionDao()
         )
+        val callRepository = CallRepository(
+            database.callDao()
+        )
 
         setContent {
             MemoryShareTheme {
@@ -67,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         messageRepository = messageRepository,
                         postRepository = postRepository,
                         spaceRepository = spaceRepository,
+                        callRepository = callRepository,
                         preferencesManager = preferencesManager
                     )
                 }
@@ -81,6 +87,7 @@ fun MemoryShareApp(
     messageRepository: MessageRepository,
     postRepository: PostRepository,
     spaceRepository: SharedSpaceRepository,
+    callRepository: CallRepository,
     preferencesManager: PreferencesManager
 ) {
     val navController = rememberNavController()
@@ -98,6 +105,9 @@ fun MemoryShareApp(
     val spaceViewModel = viewModel<SharedSpaceViewModel>(
         factory = ViewModelFactory(spaceRepository)
     )
+    val callViewModel = viewModel<CallViewModel>(
+        factory = ViewModelFactory(callRepository)
+    )
     val preferencesViewModel = PreferencesViewModel(preferencesManager)
 
     AppNavigation(
@@ -106,6 +116,7 @@ fun MemoryShareApp(
         messageViewModel = messageViewModel,
         postViewModel = postViewModel,
         spaceViewModel = spaceViewModel,
-        preferencesViewModel = preferencesViewModel
+        preferencesViewModel = preferencesViewModel,
+        callViewModel = callViewModel
     )
 }

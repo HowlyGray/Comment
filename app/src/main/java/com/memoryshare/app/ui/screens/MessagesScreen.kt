@@ -6,8 +6,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +38,9 @@ fun MessagesScreen(
     onNavigateToFeed: () -> Unit,
     onNavigateToMemories: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToArchived: () -> Unit = {},
+    onNavigateToAllStarred: () -> Unit = {}
 ) {
     val conversations by viewModel.conversations.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
@@ -55,6 +60,22 @@ fun MessagesScreen(
                         expanded = showOptionsMenu,
                         onDismissRequest = { showOptionsMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Messages importants") },
+                            onClick = {
+                                showOptionsMenu = false
+                                onNavigateToAllStarred()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Star, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Conversations archivées") },
+                            onClick = {
+                                showOptionsMenu = false
+                                onNavigateToArchived()
+                            },
+                            leadingIcon = { Icon(Icons.Default.Archive, contentDescription = null) }
+                        )
                         DropdownMenuItem(
                             text = { Text("Paramètres") },
                             onClick = {
@@ -106,6 +127,42 @@ fun MessagesScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
+                    // Bouton Archivées
+                    item {
+                        Surface(
+                            onClick = onNavigateToArchived,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Archive,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = "Archivées",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Divider()
+                    }
+
                     items(conversations) { conversation ->
                         val displayName = getConversationDisplayName(conversation, currentUser, allUsers)
                         val otherUser = if (!conversation.isGroup && conversation.participantIds.size == 2) {
