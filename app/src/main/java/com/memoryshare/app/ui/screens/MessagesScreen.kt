@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.navigationBarsPadding
 import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
@@ -304,8 +305,8 @@ fun MessagesScreen(
                     onClick = onNewConversation,
                     modifier = Modifier
                         .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                        .navigationBarsPadding()
                         .padding(16.dp)
-                        .padding(bottom = 96.dp) // Padding supplémentaire pour éviter la barre de navigation
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
                 }
