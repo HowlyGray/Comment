@@ -23,13 +23,16 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.PostMediaType
+import com.memoryshare.app.data.model.StoryMediaType
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.viewmodel.PostViewModel
+import com.memoryshare.app.ui.viewmodel.StoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(
     viewModel: PostViewModel,
+    storyViewModel: StoryViewModel,
     currentUser: User?,
     onBack: () -> Unit,
     onPostCreated: () -> Unit
@@ -42,6 +45,7 @@ fun CreatePostScreen(
     var showMediaSourceDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var publishAsStory by remember { mutableStateOf(false) }
 
     val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
     val uploadError by viewModel.uploadError.collectAsStateWithLifecycle()
@@ -81,13 +85,33 @@ fun CreatePostScreen(
                             if (currentUser != null && mediaUrl.isNotBlank()) {
                                 isLoading = true
                                 errorMessage = null
+
+                                // Créer le post
                                 viewModel.createPostWithMedia(
                                     authorId = currentUser.id,
                                     mediaUri = mediaUri,
                                     mediaUrl = mediaUrl,
                                     mediaType = selectedMediaType,
                                     caption = caption.ifBlank { null },
-                                    onSuccess = {
+                                    onSuccess = { uploadedUrl ->
+                                        // Si l'utilisateur veut aussi publier en story
+                                        if (publishAsStory && (selectedMediaType == PostMediaType.IMAGE || selectedMediaType == PostMediaType.VIDEO)) {
+                                            // Convertir le type de média
+                                            val storyMediaType = when (selectedMediaType) {
+                                                PostMediaType.IMAGE -> StoryMediaType.IMAGE
+                                                PostMediaType.VIDEO -> StoryMediaType.VIDEO
+                                                else -> StoryMediaType.IMAGE // Fallback (ne devrait pas arriver)
+                                            }
+
+                                            // Créer la story avec la même URL uploadée
+                                            storyViewModel.createStory(
+                                                authorId = currentUser.id,
+                                                mediaUrl = uploadedUrl,
+                                                mediaType = storyMediaType,
+                                                caption = caption.ifBlank { null }
+                                            )
+                                        }
+
                                         isLoading = false
                                         onPostCreated()
                                     },
@@ -289,6 +313,49 @@ fun CreatePostScreen(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
+
+            // Option pour publier en story (uniquement pour images et vidéos)
+            if (selectedMediaType == PostMediaType.IMAGE || selectedMediaType == PostMediaType.VIDEO) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = publishAsStory,
+                            onCheckedChange = { publishAsStory = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Publier en story également",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "Cette publication apparaîtra dans votre fil et comme story (24h)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
 
             // Instructions
             if (mediaUrl.isBlank()) {
