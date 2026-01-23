@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.User
@@ -39,6 +41,10 @@ fun CreatePostScreen(
     var showUrlDialog by remember { mutableStateOf(false) }
     var showMediaSourceDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
+    val uploadError by viewModel.uploadError.collectAsStateWithLifecycle()
 
     // Launcher pour sélectionner une image ou vidéo
     val visualMediaPickerLauncher = rememberLauncherForActivityResult(
@@ -74,13 +80,22 @@ fun CreatePostScreen(
                         onClick = {
                             if (currentUser != null && mediaUrl.isNotBlank()) {
                                 isLoading = true
-                                viewModel.createPost(
+                                errorMessage = null
+                                viewModel.createPostWithMedia(
                                     authorId = currentUser.id,
-                                    mediaUrls = listOf(mediaUrl),
+                                    mediaUri = mediaUri,
+                                    mediaUrl = mediaUrl,
                                     mediaType = selectedMediaType,
-                                    caption = caption.ifBlank { null }
+                                    caption = caption.ifBlank { null },
+                                    onSuccess = {
+                                        isLoading = false
+                                        onPostCreated()
+                                    },
+                                    onError = { error ->
+                                        isLoading = false
+                                        errorMessage = error
+                                    }
                                 )
-                                onPostCreated()
                             }
                         },
                         enabled = mediaUrl.isNotBlank() && !isLoading
@@ -289,14 +304,98 @@ fun CreatePostScreen(
                 )
             }
 
+            // Affichage de la progression de l'upload
             if (isLoading) {
-                Box(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 ) {
-                    CircularProgressIndicator()
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (uploadProgress != null) {
+                            Text(
+                                text = "Upload en cours...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = uploadProgress ?: 0f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Préparation de la publication...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Affichage des erreurs
+            errorMessage?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
+            uploadError?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
                 }
             }
         }
