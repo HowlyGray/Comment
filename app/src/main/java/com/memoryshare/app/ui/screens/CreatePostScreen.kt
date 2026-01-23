@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.PostMediaType
+import com.memoryshare.app.data.model.PostVisibility
 import com.memoryshare.app.data.model.StoryMediaType
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.viewmodel.PostViewModel
+import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.StoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,10 +35,12 @@ import com.memoryshare.app.ui.viewmodel.StoryViewModel
 fun CreatePostScreen(
     viewModel: PostViewModel,
     storyViewModel: StoryViewModel,
+    preferencesViewModel: PreferencesViewModel,
     currentUser: User?,
     onBack: () -> Unit,
     onPostCreated: () -> Unit
 ) {
+    val defaultVisibility by preferencesViewModel.defaultPostVisibility.collectAsState()
     var selectedMediaType by remember { mutableStateOf(PostMediaType.IMAGE) }
     var caption by remember { mutableStateOf("") }
     var mediaUri by remember { mutableStateOf<Uri?>(null) }
@@ -46,6 +50,13 @@ fun CreatePostScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var publishAsStory by remember { mutableStateOf(false) }
+    var selectedVisibility by remember { mutableStateOf(defaultVisibility) }
+    var showVisibilityDialog by remember { mutableStateOf(false) }
+
+    // Update selectedVisibility when defaultVisibility changes
+    LaunchedEffect(defaultVisibility) {
+        selectedVisibility = defaultVisibility
+    }
 
     val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
     val uploadError by viewModel.uploadError.collectAsStateWithLifecycle()
@@ -93,6 +104,7 @@ fun CreatePostScreen(
                                     mediaUrl = mediaUrl,
                                     mediaType = selectedMediaType,
                                     caption = caption.ifBlank { null },
+                                    visibility = selectedVisibility,
                                     onSuccess = { uploadedUrl ->
                                         // Si l'utilisateur veut aussi publier en story
                                         if (publishAsStory && (selectedMediaType == PostMediaType.IMAGE || selectedMediaType == PostMediaType.VIDEO)) {
@@ -357,6 +369,39 @@ fun CreatePostScreen(
                 }
             }
 
+            // Sélection de la visibilité
+            ListItem(
+                headlineContent = {
+                    Text("Visibilité de la publication")
+                },
+                supportingContent = {
+                    Text(
+                        text = when (selectedVisibility) {
+                            PostVisibility.PUBLIC -> "Public - Visible par tout le monde"
+                            PostVisibility.FRIENDS -> "Amis uniquement"
+                            PostVisibility.FOLLOWERS -> "Followers uniquement"
+                            PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
+                            PostVisibility.PRIVATE -> "Privé - Visible uniquement par vous"
+                        }
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Visibilité"
+                    )
+                },
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { showVisibilityDialog = true }
+            )
+
+            Divider()
+
             // Instructions
             if (mediaUrl.isBlank()) {
                 Text(
@@ -592,6 +637,72 @@ fun CreatePostScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showUrlDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    // Dialog pour changer la visibilité
+    if (showVisibilityDialog) {
+        var tempVisibility by remember { mutableStateOf(selectedVisibility) }
+        AlertDialog(
+            onDismissRequest = { showVisibilityDialog = false },
+            title = { Text("Visibilité de la publication") },
+            text = {
+                Column {
+                    PostVisibility.values().forEach { visibility ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { tempVisibility = visibility }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = tempVisibility == visibility,
+                                onClick = { tempVisibility = visibility }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = when (visibility) {
+                                        PostVisibility.PUBLIC -> "Public"
+                                        PostVisibility.FRIENDS -> "Amis uniquement"
+                                        PostVisibility.FOLLOWERS -> "Followers uniquement"
+                                        PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
+                                        PostVisibility.PRIVATE -> "Privé"
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = when (visibility) {
+                                        PostVisibility.PUBLIC -> "Visible par tout le monde"
+                                        PostVisibility.FRIENDS -> "Visible uniquement par vos amis"
+                                        PostVisibility.FOLLOWERS -> "Visible uniquement par vos followers"
+                                        PostVisibility.FRIENDS_AND_FOLLOWERS -> "Visible par vos amis et followers"
+                                        PostVisibility.PRIVATE -> "Visible uniquement par vous"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedVisibility = tempVisibility
+                        showVisibilityDialog = false
+                    }
+                ) {
+                    Text("Confirmer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVisibilityDialog = false }) {
                     Text("Annuler")
                 }
             }

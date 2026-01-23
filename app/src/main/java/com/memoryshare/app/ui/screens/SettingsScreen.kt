@@ -8,9 +8,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.memoryshare.app.data.model.PostVisibility
 import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,6 +24,8 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
+    val defaultPostVisibility by preferencesViewModel.defaultPostVisibility.collectAsState()
+    var showVisibilityDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -86,6 +90,38 @@ fun SettingsScreen(
                 title = "Confidentialité",
                 subtitle = "Contrôlez qui peut voir vos contenus",
                 onClick = {}
+            )
+
+            ListItem(
+                headlineContent = {
+                    Text("Visibilité par défaut des publications")
+                },
+                supportingContent = {
+                    Text(
+                        text = when (defaultPostVisibility) {
+                            PostVisibility.PUBLIC -> "Public"
+                            PostVisibility.FRIENDS -> "Amis uniquement"
+                            PostVisibility.FOLLOWERS -> "Followers uniquement"
+                            PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
+                            PostVisibility.PRIVATE -> "Privé"
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = "Visibilité"
+                    )
+                },
+                trailingContent = {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier.clickable { showVisibilityDialog = true }
             )
 
             Divider()
@@ -159,6 +195,77 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Dialog pour changer la visibilité par défaut
+    if (showVisibilityDialog) {
+        var selectedVisibility by remember { mutableStateOf(defaultPostVisibility) }
+        AlertDialog(
+            onDismissRequest = { showVisibilityDialog = false },
+            title = { Text("Visibilité par défaut") },
+            text = {
+                Column {
+                    Text(
+                        text = "Choisissez la visibilité par défaut de vos nouvelles publications",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    PostVisibility.values().forEach { visibility ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedVisibility = visibility }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedVisibility == visibility,
+                                onClick = { selectedVisibility = visibility }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = when (visibility) {
+                                        PostVisibility.PUBLIC -> "Public"
+                                        PostVisibility.FRIENDS -> "Amis uniquement"
+                                        PostVisibility.FOLLOWERS -> "Followers uniquement"
+                                        PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
+                                        PostVisibility.PRIVATE -> "Privé"
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = when (visibility) {
+                                        PostVisibility.PUBLIC -> "Visible par tout le monde"
+                                        PostVisibility.FRIENDS -> "Visible uniquement par vos amis"
+                                        PostVisibility.FOLLOWERS -> "Visible uniquement par vos followers"
+                                        PostVisibility.FRIENDS_AND_FOLLOWERS -> "Visible par vos amis et followers"
+                                        PostVisibility.PRIVATE -> "Visible uniquement par vous"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        preferencesViewModel.setDefaultPostVisibility(selectedVisibility)
+                        showVisibilityDialog = false
+                    }
+                ) {
+                    Text("Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVisibilityDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 }
 

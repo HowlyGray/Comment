@@ -41,7 +41,8 @@ class PostRepository(
         mediaUrls: List<String>,
         mediaType: PostMediaType,
         caption: String? = null,
-        thumbnailUrl: String? = null
+        thumbnailUrl: String? = null,
+        visibility: com.memoryshare.app.data.model.PostVisibility = com.memoryshare.app.data.model.PostVisibility.PUBLIC
     ): Post {
         val post = Post(
             id = UUID.randomUUID().toString(),
@@ -49,7 +50,8 @@ class PostRepository(
             caption = caption,
             mediaUrls = mediaUrls,
             mediaType = mediaType,
-            thumbnailUrl = thumbnailUrl
+            thumbnailUrl = thumbnailUrl,
+            visibility = visibility
         )
         // Sauvegarder localement
         postDao.insertPost(post)
