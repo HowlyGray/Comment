@@ -9,6 +9,14 @@ enum class PostMediaType {
     AUDIO
 }
 
+enum class PostVisibility {
+    PUBLIC,        // Tout le monde
+    FRIENDS,       // Amis uniquement
+    FOLLOWERS,     // Followers uniquement
+    FRIENDS_AND_FOLLOWERS,  // Amis et followers
+    PRIVATE        // Uniquement moi
+}
+
 @Entity(tableName = "posts")
 data class Post(
     @PrimaryKey
@@ -21,5 +29,6 @@ data class Post(
     val likeCount: Int = 0,
     val commentCount: Int = 0,
     val timestamp: Long = System.currentTimeMillis(),
-    val isLikedByCurrentUser: Boolean = false
+    val isLikedByCurrentUser: Boolean = false,
+    val visibility: PostVisibility = PostVisibility.PUBLIC
 )

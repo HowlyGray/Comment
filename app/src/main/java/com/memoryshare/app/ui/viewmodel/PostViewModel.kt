@@ -192,6 +192,26 @@ class PostViewModel(
         }
     }
 
+    fun updatePost(post: Post) {
+        viewModelScope.launch {
+            repository.updatePost(post)
+        }
+    }
+
+    fun updatePostVisibility(post: Post, visibility: com.memoryshare.app.data.model.PostVisibility) {
+        viewModelScope.launch {
+            val updatedPost = post.copy(visibility = visibility)
+            repository.updatePost(updatedPost)
+        }
+    }
+
+    fun updatePostCaption(post: Post, caption: String) {
+        viewModelScope.launch {
+            val updatedPost = post.copy(caption = caption)
+            repository.updatePost(updatedPost)
+        }
+    }
+
     fun deleteComment(comment: Comment) {
         viewModelScope.launch {
             repository.deleteComment(comment)

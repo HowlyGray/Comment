@@ -144,6 +144,24 @@ class PostRepository(
         return comment
     }
 
+    suspend fun updatePost(post: Post) {
+        // Mettre à jour localement
+        postDao.updatePost(post)
+
+        // Synchroniser avec Firebase
+        scope.launch {
+            FirebaseManager.saveDocument(
+                collection = FirebaseManager.Collections.POSTS,
+                documentId = post.id,
+                data = post
+            ).onSuccess {
+                Log.d(TAG, "Post updated in Firebase: ${post.id}")
+            }.onFailure { e ->
+                Log.e(TAG, "Failed to update post in Firebase: ${post.id}", e)
+            }
+        }
+    }
+
     suspend fun deletePost(post: Post) {
         // Supprimer localement
         commentDao.deleteCommentsByPost(post.id)
