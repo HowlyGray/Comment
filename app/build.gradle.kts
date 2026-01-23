@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
+    // Firebase
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -86,6 +88,7 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
@@ -93,6 +96,39 @@ dependencies {
     // ExoPlayer for video/audio
     implementation("androidx.media3:media3-exoplayer:1.2.0")
     implementation("androidx.media3:media3-ui:1.2.0")
+
+    // ===== PHASE 1: Firebase Backend =====
+    // Firebase BoM (Bill of Materials)
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    // Firebase Auth
+    implementation("com.google.firebase:firebase-auth-ktx")
+    // Firebase Firestore
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    // Firebase Storage
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    // ===== PHASE 2: Media (CameraX + Audio Recording) =====
+    // CameraX
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("androidx.camera:camera-video:$cameraxVersion")
+    // Image compression
+    implementation("id.zelory:compressor:3.0.1")
+    // Permissions
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    // ===== PHASE 3: Real-time (FCM + Presence) =====
+    // Firebase Cloud Messaging
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    // WorkManager for background sync
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // ===== PHASE 4: Calls (Agora SDK) =====
+    // Agora Voice/Video SDK
+    implementation("io.agora.rtc:full-sdk:4.2.6")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
