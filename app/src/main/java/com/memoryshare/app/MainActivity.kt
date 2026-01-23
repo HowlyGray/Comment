@@ -1,6 +1,7 @@
 package com.memoryshare.app
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.FirebaseApp
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.memoryshare.app.data.local.AppDatabase
 import com.memoryshare.app.data.local.PreferencesManager
 import com.memoryshare.app.data.repository.CallRepository
@@ -31,6 +35,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialiser Firebase
+        try {
+            FirebaseApp.initializeApp(this)
+            Log.d("Firebase", "Firebase initialized successfully")
+
+            // Configurer Firestore pour la persistence hors ligne
+            val firestore = FirebaseFirestore.getInstance()
+            val settings = FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(true)
+                .build()
+            firestore.firestoreSettings = settings
+            Log.d("Firestore", "Firestore configured with offline persistence")
+        } catch (e: Exception) {
+            Log.e("Firebase", "Error initializing Firebase", e)
+        }
 
         // Initialiser la base de données
         val database = AppDatabase.getDatabase(applicationContext)
