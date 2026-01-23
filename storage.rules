@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidImageSize() {
+      return request.resource.size < 10 * 1024 * 1024; // 10 MB
+    }
+
+    function isValidVideoSize() {
+      return request.resource.size < 100 * 1024 * 1024; // 100 MB
+    }
+
+    function isValidAudioSize() {
+      return request.resource.size < 20 * 1024 * 1024; // 20 MB
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isVideo() {
+      return request.resource.contentType.matches('video/.*');
+    }
+
+    function isAudio() {
+      return request.resource.contentType.matches('audio/.*');
+    }
+
+    // Profile pictures
+    match /profile_pictures/{userId}.jpg {
+      // Anyone can read profile pictures
+      allow read: if true;
+      // Only the user can upload/update their own profile picture
+      allow write: if isSignedIn() &&
+                     request.auth.uid == userId &&
+                     isImage() &&
+                     isValidImageSize();
+    }
+
+    // Post images
+    match /post_images/{imageId} {
+      // Anyone can read post images
+      allow read: if true;
+      // Only signed-in users can upload images
+      allow create: if isSignedIn() &&
+                      isImage() &&
+                      isValidImageSize();
+      // Only the uploader can delete (we store uploader info in metadata)
+      allow delete: if isSignedIn();
+    }
+
+    // Post videos
+    match /post_videos/{videoId} {
+      // Anyone can read post videos
+      allow read: if true;
+      // Only signed-in users can upload videos
+      allow create: if isSignedIn() &&
+                      isVideo() &&
+                      isValidVideoSize();
+      // Only the uploader can delete
+      allow delete: if isSignedIn();
+    }
+
+    // Message media (images, videos, audio)
+    match /message_media/{mediaId} {
+      // Only signed-in users can read message media
+      allow read: if isSignedIn();
+      // Only signed-in users can upload message media
+      allow create: if isSignedIn() &&
+                      ((isImage() && isValidImageSize()) ||
+                       (isVideo() && isValidVideoSize()) ||
+                       (isAudio() && isValidAudioSize()));
+      // Only the uploader can delete
+      allow delete: if isSignedIn();
+    }
+
+    // Space media (shared spaces)
+    match /space_media/{spaceId}/{mediaId} {
+      // Only signed-in users can read space media
+      allow read: if isSignedIn();
+      // Only signed-in users can upload space media
+      allow create: if isSignedIn() &&
+                      ((isImage() && isValidImageSize()) ||
+                       (isVideo() && isValidVideoSize()));
+      // Only the uploader can delete
+      allow delete: if isSignedIn();
+    }
+
+    // Story media
+    match /story_media/{storyId} {
+      // Anyone can read stories
+      allow read: if true;
+      // Only signed-in users can upload stories
+      allow create: if isSignedIn() &&
+                      ((isImage() && isValidImageSize()) ||
+                       (isVideo() && isValidVideoSize()));
+      // Only the uploader can delete
+      allow delete: if isSignedIn();
+    }
+
+    // Audio files
+    match /audios/{audioId} {
+      // Anyone can read audio files
+      allow read: if true;
+      // Only signed-in users can upload audio
+      allow create: if isSignedIn() &&
+                      isAudio() &&
+                      isValidAudioSize();
+      // Only the uploader can delete
+      allow delete: if isSignedIn();
+    }
+  }
+}
