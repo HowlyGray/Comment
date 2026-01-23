@@ -21,6 +21,7 @@ import com.memoryshare.app.data.repository.CallRepository
 import com.memoryshare.app.data.repository.MessageRepository
 import com.memoryshare.app.data.repository.PostRepository
 import com.memoryshare.app.data.repository.SharedSpaceRepository
+import com.memoryshare.app.data.repository.StoryRepository
 import com.memoryshare.app.data.repository.UserRepository
 import com.memoryshare.app.ui.navigation.AppNavigation
 import com.memoryshare.app.ui.theme.MemoryShareTheme
@@ -29,6 +30,7 @@ import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
+import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 
 class MainActivity : ComponentActivity() {
@@ -77,6 +79,9 @@ class MainActivity : ComponentActivity() {
             database.mediaDao(),
             database.sharedSpacePermissionDao()
         )
+        val storyRepository = StoryRepository(
+            database.storyDao()
+        )
         val callRepository = CallRepository(
             database.callDao()
         )
@@ -92,6 +97,7 @@ class MainActivity : ComponentActivity() {
                         messageRepository = messageRepository,
                         postRepository = postRepository,
                         spaceRepository = spaceRepository,
+                        storyRepository = storyRepository,
                         callRepository = callRepository,
                         preferencesManager = preferencesManager
                     )
@@ -107,6 +113,7 @@ fun MemoryShareApp(
     messageRepository: MessageRepository,
     postRepository: PostRepository,
     spaceRepository: SharedSpaceRepository,
+    storyRepository: StoryRepository,
     callRepository: CallRepository,
     preferencesManager: PreferencesManager
 ) {
@@ -125,6 +132,9 @@ fun MemoryShareApp(
     val spaceViewModel = viewModel<SharedSpaceViewModel>(
         factory = ViewModelFactory(spaceRepository)
     )
+    val storyViewModel = viewModel<StoryViewModel>(
+        factory = ViewModelFactory(storyRepository)
+    )
     val callViewModel = viewModel<CallViewModel>(
         factory = ViewModelFactory(callRepository)
     )
@@ -136,6 +146,7 @@ fun MemoryShareApp(
         messageViewModel = messageViewModel,
         postViewModel = postViewModel,
         spaceViewModel = spaceViewModel,
+        storyViewModel = storyViewModel,
         preferencesViewModel = preferencesViewModel,
         callViewModel = callViewModel
     )

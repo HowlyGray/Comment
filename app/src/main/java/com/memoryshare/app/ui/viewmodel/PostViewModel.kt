@@ -123,6 +123,7 @@ class PostViewModel(
 
     /**
      * Crée un post avec upload automatique du média si c'est un URI local
+     * @param onSuccess Callback appelé avec l'URL finale du média uploadé
      */
     fun createPostWithMedia(
         authorId: String,
@@ -131,7 +132,7 @@ class PostViewModel(
         mediaType: PostMediaType,
         caption: String? = null,
         thumbnailUrl: String? = null,
-        onSuccess: () -> Unit = {},
+        onSuccess: (String) -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -153,7 +154,7 @@ class PostViewModel(
                 // Créer le post avec l'URL Firebase ou l'URL web
                 Log.d(TAG, "Creating post with URL: $finalUrl")
                 repository.createPost(authorId, listOf(finalUrl), mediaType, caption, thumbnailUrl)
-                onSuccess()
+                onSuccess(finalUrl)
             } catch (e: Exception) {
                 Log.e(TAG, "Error creating post", e)
                 onError(e.message ?: "Erreur de création du post")

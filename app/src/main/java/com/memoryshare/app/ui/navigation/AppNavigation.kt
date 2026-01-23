@@ -19,6 +19,7 @@ import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
+import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 
@@ -29,6 +30,7 @@ fun AppNavigation(
     messageViewModel: MessageViewModel,
     postViewModel: PostViewModel,
     spaceViewModel: SharedSpaceViewModel,
+    storyViewModel: StoryViewModel,
     preferencesViewModel: PreferencesViewModel,
     callViewModel: CallViewModel
 ) {
@@ -242,6 +244,7 @@ fun AppNavigation(
         ) {
             CreatePostScreen(
                 viewModel = postViewModel,
+                storyViewModel = storyViewModel,
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() },
                 onPostCreated = {
