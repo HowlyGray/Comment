@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.PersistentCacheSettings
 import com.memoryshare.app.data.local.AppDatabase
 import com.memoryshare.app.data.local.PreferencesManager
 import com.memoryshare.app.data.repository.CallRepository
@@ -41,10 +42,10 @@ class MainActivity : ComponentActivity() {
             FirebaseApp.initializeApp(this)
             Log.d("Firebase", "Firebase initialized successfully")
 
-            // Configurer Firestore pour la persistence hors ligne
+            // Configurer Firestore pour la persistence hors ligne (version moderne)
             val firestore = FirebaseFirestore.getInstance()
             val settings = FirebaseFirestoreSettings.Builder()
-                .setPersistenceEnabled(true)
+                .setLocalCacheSettings(PersistentCacheSettings.newBuilder().build())
                 .build()
             firestore.firestoreSettings = settings
             Log.d("Firestore", "Firestore configured with offline persistence")
