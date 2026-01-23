@@ -231,6 +231,9 @@ fun AppNavigation(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onMediaClick = { postId ->
+                    navController.navigate(Screen.MediaViewer.createRoute(postId))
                 }
             )
         }
@@ -245,6 +248,7 @@ fun AppNavigation(
             CreatePostScreen(
                 viewModel = postViewModel,
                 storyViewModel = storyViewModel,
+                preferencesViewModel = preferencesViewModel,
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() },
                 onPostCreated = {
@@ -268,6 +272,28 @@ fun AppNavigation(
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(
+            route = Screen.MediaViewer.route,
+            arguments = listOf(navArgument("postId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId") ?: return@composable
+            val posts by postViewModel.posts.collectAsState()
+            val post = posts.find { it.id == postId }
+
+            if (post != null && post.mediaUrls.isNotEmpty()) {
+                MediaViewerScreen(
+                    mediaUrl = post.mediaUrls.first(),
+                    mediaType = post.mediaType,
+                    caption = post.caption,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Screen.Memories.route) {

@@ -13,6 +13,7 @@ class PreferencesManager(context: Context) {
         private const val PREFS_NAME = "memoryshare_prefs"
         private const val KEY_CURRENT_USER_ID = "current_user_id"
         private const val KEY_FAB_ON_LEFT = "fab_on_left"
+        private const val KEY_DEFAULT_POST_VISIBILITY = "default_post_visibility"
     }
 
     fun saveCurrentUserId(userId: String?) {
@@ -40,5 +41,13 @@ class PreferencesManager(context: Context) {
 
     fun isFabOnLeft(): Boolean {
         return prefs.getBoolean(KEY_FAB_ON_LEFT, false)
+    }
+
+    fun setDefaultPostVisibility(visibility: String) {
+        prefs.edit().putString(KEY_DEFAULT_POST_VISIBILITY, visibility).apply()
+    }
+
+    fun getDefaultPostVisibility(): String {
+        return prefs.getString(KEY_DEFAULT_POST_VISIBILITY, "PUBLIC") ?: "PUBLIC"
     }
 }

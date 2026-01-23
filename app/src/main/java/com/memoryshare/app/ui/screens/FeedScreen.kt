@@ -40,7 +40,8 @@ fun FeedScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToStories: () -> Unit = {},
-    onNavigateToReels: () -> Unit = {}
+    onNavigateToReels: () -> Unit = {},
+    onMediaClick: (String) -> Unit = {}
 ) {
     val allPosts by viewModel.posts.collectAsState()
     val followingPosts by viewModel.followingPosts.collectAsState()
@@ -209,7 +210,11 @@ fun FeedScreen(
                                 currentUser = currentUser,
                                 onLikeClick = { viewModel.toggleLike(post) },
                                 onCommentClick = { onPostClick(post.id) },
-                                onPostClick = { onPostClick(post.id) }
+                                onPostClick = { onPostClick(post.id) },
+                                onMediaClick = { onMediaClick(post.id) },
+                                onEditCaption = { caption -> viewModel.updatePostCaption(post, caption) },
+                                onChangeVisibility = { visibility -> viewModel.updatePostVisibility(post, visibility) },
+                                onDeletePost = { viewModel.deletePost(post) }
                             )
                             Divider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
                         }
@@ -238,8 +243,17 @@ fun PostItem(
     currentUser: User?,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
-    onPostClick: () -> Unit
+    onPostClick: () -> Unit,
+    onMediaClick: () -> Unit = {},
+    onEditCaption: (String) -> Unit = {},
+    onChangeVisibility: (com.memoryshare.app.data.model.PostVisibility) -> Unit = {},
+    onDeletePost: () -> Unit = {}
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showEditCaptionDialog by remember { mutableStateOf(false) }
+    var showChangeVisibilityDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    val isAuthor = post.authorId == currentUser?.id
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -269,8 +283,42 @@ fun PostItem(
                 )
             }
 
-            IconButton(onClick = { /* Plus d'options */ }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Plus")
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Plus")
+                }
+
+                if (isAuthor) {
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Modifier la légende") },
+                            onClick = {
+                                showMenu = false
+                                showEditCaptionDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Changer la visibilité") },
+                            onClick = {
+                                showMenu = false
+                                showChangeVisibilityDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Supprimer") },
+                            onClick = {
+                                showMenu = false
+                                showDeleteConfirmDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                    }
+                }
             }
         }
 
@@ -281,7 +329,8 @@ fun PostItem(
                 contentDescription = post.caption,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp),
+                    .height(300.dp)
+                    .clickable { onMediaClick() },
                 contentScale = ContentScale.Crop
             )
         }
@@ -350,6 +399,117 @@ fun PostItem(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    // Dialog pour modifier la légende
+    if (showEditCaptionDialog) {
+        var editedCaption by remember { mutableStateOf(post.caption ?: "") }
+        AlertDialog(
+            onDismissRequest = { showEditCaptionDialog = false },
+            title = { Text("Modifier la légende") },
+            text = {
+                TextField(
+                    value = editedCaption,
+                    onValueChange = { editedCaption = it },
+                    placeholder = { Text("Entrez une légende") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEditCaption(editedCaption)
+                        showEditCaptionDialog = false
+                    }
+                ) {
+                    Text("Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditCaptionDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    // Dialog pour changer la visibilité
+    if (showChangeVisibilityDialog) {
+        var selectedVisibility by remember { mutableStateOf(post.visibility) }
+        AlertDialog(
+            onDismissRequest = { showChangeVisibilityDialog = false },
+            title = { Text("Changer la visibilité") },
+            text = {
+                Column {
+                    com.memoryshare.app.data.model.PostVisibility.values().forEach { visibility ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedVisibility = visibility }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedVisibility == visibility,
+                                onClick = { selectedVisibility = visibility }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (visibility) {
+                                    com.memoryshare.app.data.model.PostVisibility.PUBLIC -> "Public"
+                                    com.memoryshare.app.data.model.PostVisibility.FRIENDS -> "Amis uniquement"
+                                    com.memoryshare.app.data.model.PostVisibility.FOLLOWERS -> "Followers uniquement"
+                                    com.memoryshare.app.data.model.PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
+                                    com.memoryshare.app.data.model.PostVisibility.PRIVATE -> "Privé"
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onChangeVisibility(selectedVisibility)
+                        showChangeVisibilityDialog = false
+                    }
+                ) {
+                    Text("Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangeVisibilityDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    // Dialog de confirmation de suppression
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Supprimer la publication") },
+            text = { Text("Êtes-vous sûr de vouloir supprimer cette publication ? Cette action est irréversible.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeletePost()
+                        showDeleteConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 }
 
