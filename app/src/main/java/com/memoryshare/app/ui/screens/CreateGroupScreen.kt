@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.UserAvatar
 import com.memoryshare.app.ui.viewmodel.UserViewModel
@@ -80,6 +82,8 @@ fun CreateGroupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .navigationBarsPadding()
+                .imePadding()
         ) {
             // Barre de recherche
             OutlinedTextField(
