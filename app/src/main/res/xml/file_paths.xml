@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Cache directory for temporary files -->
+    <cache-path name="cache" path="." />
+
+    <!-- Files directory for app-specific files -->
+    <files-path name="files" path="." />
+
+    <!-- External files directory -->
+    <external-files-path name="external_files" path="." />
+
+    <!-- External cache directory -->
+    <external-cache-path name="external_cache" path="." />
+
+    <!-- Media directories -->
+    <external-files-path name="images" path="Pictures/" />
+    <external-files-path name="videos" path="Movies/" />
+    <external-files-path name="audio" path="Music/" />
+
+    <!-- Camera capture directory -->
+    <external-files-path name="camera" path="DCIM/" />
+</paths>
