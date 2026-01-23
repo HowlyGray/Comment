@@ -14,6 +14,9 @@ sealed class Screen(val route: String) {
     object PostDetail : Screen("feed/{postId}") {
         fun createRoute(postId: String) = "feed/$postId"
     }
+    object MediaViewer : Screen("media/{postId}") {
+        fun createRoute(postId: String) = "media/$postId"
+    }
     object Memories : Screen("memories")
     object MemorySpace : Screen("memories/{spaceId}") {
         fun createRoute(spaceId: String) = "memories/$spaceId"
