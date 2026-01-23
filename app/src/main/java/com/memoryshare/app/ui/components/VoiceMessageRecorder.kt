@@ -342,7 +342,7 @@ fun VoiceMessagePlayer(
         // Progress bar
         Column(modifier = Modifier.weight(1f)) {
             LinearProgressIndicator(
-                progress = { progress },
+                progress = progress,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp)

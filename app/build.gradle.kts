@@ -101,11 +101,14 @@ dependencies {
     // Firebase BoM (Bill of Materials)
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     // Firebase Auth
-    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-auth")
     // Firebase Firestore
-    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-firestore")
     // Firebase Storage
-    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-storage")
+    // Firebase Analytics
+    implementation("com.google.firebase:firebase-analytics")
+
 
     // ===== PHASE 2: Media (CameraX + Audio Recording) =====
     // CameraX
@@ -122,7 +125,7 @@ dependencies {
 
     // ===== PHASE 3: Real-time (FCM + Presence) =====
     // Firebase Cloud Messaging
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-messaging")
     // WorkManager for background sync
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 

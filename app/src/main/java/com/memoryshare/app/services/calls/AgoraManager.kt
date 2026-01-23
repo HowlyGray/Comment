@@ -356,7 +356,7 @@ class AgoraManager(private val context: Context) {
     /**
      * Get call statistics
      */
-    fun getCallStats(): RtcStats? {
+    fun getCallStats(): IRtcEngineEventHandler.RtcStats? {
         // Stats are provided via callback
         return null
     }
@@ -431,10 +431,10 @@ class AgoraManager(private val context: Context) {
         override fun onError(err: Int) {
             Log.e(TAG, "Agora error: $err")
             val errorMessage = when (err) {
-                ErrorCode.ERR_INVALID_TOKEN -> "Invalid token"
-                ErrorCode.ERR_TOKEN_EXPIRED -> "Token expired"
-                ErrorCode.ERR_NOT_INITIALIZED -> "Not initialized"
-                ErrorCode.ERR_INVALID_CHANNEL_NAME -> "Invalid channel name"
+                Constants.ERR_INVALID_TOKEN -> "Invalid token"
+                Constants.ERR_TOKEN_EXPIRED -> "Token expired"
+                Constants.ERR_NOT_INITIALIZED -> "Not initialized"
+                Constants.ERR_INVALID_CHANNEL_NAME -> "Invalid channel name"
                 else -> "Error code: $err"
             }
             _callState.value = CallState.Error(errorMessage)

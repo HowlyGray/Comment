@@ -57,6 +57,9 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
         const val KEY_MESSAGE_ID = "messageId"
         const val KEY_CALL_ID = "callId"
         const val KEY_CALL_TYPE = "callType"
+
+        // Notification IDs
+        const val CALL_NOTIFICATION_ID = 1001
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -123,7 +126,6 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
         val senderImage = data[KEY_SENDER_IMAGE]
         val body = data[KEY_BODY] ?: "New message"
         val conversationId = data[KEY_CONVERSATION_ID]
-        val messageId = data[KEY_MESSAGE_ID]
 
         serviceScope.launch {
             // Load sender image
@@ -421,10 +423,6 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
 
         // In a real implementation:
         // firestoreManager.saveFcmToken(currentUserId, token)
-    }
-
-    companion object NotificationIds {
-        const val CALL_NOTIFICATION_ID = 1001
     }
 }
 

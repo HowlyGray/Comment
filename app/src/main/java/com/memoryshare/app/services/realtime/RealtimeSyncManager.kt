@@ -19,6 +19,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 /**
  * Realtime Sync Manager
@@ -66,7 +67,8 @@ class RealtimeSyncManager(
                 }
 
                 scope.launch {
-                    snapshot?.documentChanges?.forEach { change ->
+                    val changes = snapshot?.documentChanges ?: emptyList()
+                    for (change in changes) {
                         val conversation = change.document.toConversation()
                         when (change.type) {
                             DocumentChange.Type.ADDED,
@@ -108,7 +110,8 @@ class RealtimeSyncManager(
                 }
 
                 scope.launch {
-                    snapshot?.documentChanges?.forEach { change ->
+                    val changes = snapshot?.documentChanges ?: emptyList()
+                    for (change in changes) {
                         val message = change.document.toMessage()
                         when (change.type) {
                             DocumentChange.Type.ADDED,
@@ -186,7 +189,7 @@ class RealtimeSyncManager(
                 .get()
                 .await()
 
-            conversationsSnapshot.documents.forEach { doc ->
+            for (doc in conversationsSnapshot.documents) {
                 doc.toConversation()?.let { conversation ->
                     conversationDao.insertConversation(conversation)
 
@@ -198,7 +201,9 @@ class RealtimeSyncManager(
                         .await()
 
                     val messages = messagesSnapshot.documents.mapNotNull { it.toMessage() }
-                    messages.forEach { messageDao.insertMessage(it) }
+                    for (message in messages) {
+                        messageDao.insertMessage(message)
+                    }
                 }
             }
 
@@ -222,8 +227,10 @@ class RealtimeSyncManager(
                 .get()
                 .await()
 
-            messagesSnapshot.documents.mapNotNull { it.toMessage() }
-                .forEach { messageDao.insertMessage(it) }
+            val messages = messagesSnapshot.documents.mapNotNull { it.toMessage() }
+            for (message in messages) {
+                messageDao.insertMessage(message)
+            }
 
             Log.d(TAG, "Conversation $conversationId synced")
         } catch (e: Exception) {
@@ -238,7 +245,9 @@ class RealtimeSyncManager(
         conversationsListener?.remove()
         conversationsListener = null
 
-        messageListeners.values.forEach { it.remove() }
+        for (listener in messageListeners.values) {
+            listener.remove()
+        }
         messageListeners.clear()
     }
 
@@ -295,10 +304,5 @@ class RealtimeSyncManager(
             Log.e(TAG, "Failed to convert document to Message", e)
             null
         }
-    }
-
-    // Helper suspend function for Firestore queries
-    private suspend fun <T> com.google.firebase.firestore.Task<T>.await(): T {
-        return kotlinx.coroutines.tasks.await(this)
     }
 }

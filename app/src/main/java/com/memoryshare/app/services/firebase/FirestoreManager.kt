@@ -3,7 +3,6 @@ package com.memoryshare.app.services.firebase
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
@@ -42,9 +41,6 @@ class FirestoreManager {
 
     // ==================== USER OPERATIONS ====================
 
-    /**
-     * Create or update user in Firestore
-     */
     suspend fun saveUser(user: User): Result<Unit> {
         return try {
             db.collection(USERS).document(user.id).set(user.toMap()).await()
@@ -54,9 +50,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Get user by ID
-     */
     suspend fun getUser(userId: String): Result<User?> {
         return try {
             val doc = db.collection(USERS).document(userId).get().await()
@@ -66,9 +59,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Listen to user changes in real-time
-     */
     fun observeUser(userId: String): Flow<User?> = callbackFlow {
         val listener = db.collection(USERS).document(userId)
             .addSnapshotListener { snapshot, error ->
@@ -81,9 +71,6 @@ class FirestoreManager {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Search users by username or display name
-     */
     suspend fun searchUsers(query: String): Result<List<User>> {
         return try {
             val results = db.collection(USERS)
@@ -101,9 +88,6 @@ class FirestoreManager {
 
     // ==================== CONVERSATION OPERATIONS ====================
 
-    /**
-     * Create conversation
-     */
     suspend fun createConversation(conversation: Conversation): Result<String> {
         return try {
             val docRef = db.collection(CONVERSATIONS).document(conversation.id)
@@ -114,9 +98,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Get conversations for user
-     */
     fun observeConversations(userId: String): Flow<List<Conversation>> = callbackFlow {
         val listener = db.collection(CONVERSATIONS)
             .whereArrayContains("participantIds", userId)
@@ -132,9 +113,6 @@ class FirestoreManager {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Update conversation last message
-     */
     suspend fun updateConversationLastMessage(
         conversationId: String,
         message: String,
@@ -155,9 +133,6 @@ class FirestoreManager {
 
     // ==================== MESSAGE OPERATIONS ====================
 
-    /**
-     * Send message
-     */
     suspend fun sendMessage(conversationId: String, message: Message): Result<String> {
         return try {
             val docRef = db.collection(CONVERSATIONS)
@@ -166,7 +141,6 @@ class FirestoreManager {
                 .document(message.id)
             docRef.set(message.toMap()).await()
 
-            // Update conversation last message
             updateConversationLastMessage(
                 conversationId,
                 if (message.type == MessageType.TEXT) message.content else "[${message.type.name}]",
@@ -179,9 +153,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Observe messages in conversation
-     */
     fun observeMessages(conversationId: String): Flow<List<Message>> = callbackFlow {
         val listener = db.collection(CONVERSATIONS)
             .document(conversationId)
@@ -198,9 +169,6 @@ class FirestoreManager {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Update message (edit)
-     */
     suspend fun updateMessage(
         conversationId: String,
         messageId: String,
@@ -223,9 +191,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Delete message
-     */
     suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit> {
         return try {
             db.collection(CONVERSATIONS)
@@ -240,9 +205,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Add reaction to message
-     */
     suspend fun addReaction(
         conversationId: String,
         messageId: String,
@@ -272,9 +234,6 @@ class FirestoreManager {
 
     // ==================== POST OPERATIONS ====================
 
-    /**
-     * Create post
-     */
     suspend fun createPost(post: Post): Result<String> {
         return try {
             db.collection(POSTS).document(post.id).set(post.toMap()).await()
@@ -284,12 +243,9 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Observe posts feed
-     */
     fun observePosts(limit: Int = 50): Flow<List<Post>> = callbackFlow {
         val listener = db.collection(POSTS)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -302,9 +258,6 @@ class FirestoreManager {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Toggle like on post
-     */
     suspend fun togglePostLike(postId: String, userId: String, isLiked: Boolean): Result<Unit> {
         return try {
             val postRef = db.collection(POSTS).document(postId)
@@ -331,9 +284,6 @@ class FirestoreManager {
 
     // ==================== STORY OPERATIONS ====================
 
-    /**
-     * Create story
-     */
     suspend fun createStory(story: Story): Result<String> {
         return try {
             db.collection(STORIES).document(story.id).set(story.toMap()).await()
@@ -343,9 +293,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Observe active stories (not expired)
-     */
     fun observeStories(): Flow<List<Story>> = callbackFlow {
         val listener = db.collection(STORIES)
             .whereGreaterThan("expiresAt", System.currentTimeMillis())
@@ -361,9 +308,6 @@ class FirestoreManager {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Mark story as viewed
-     */
     suspend fun markStoryViewed(storyId: String, userId: String): Result<Unit> {
         return try {
             db.collection(STORIES).document(storyId).update(
@@ -380,9 +324,6 @@ class FirestoreManager {
 
     // ==================== SHARED SPACE OPERATIONS ====================
 
-    /**
-     * Create shared space
-     */
     suspend fun createSharedSpace(space: SharedSpace): Result<String> {
         return try {
             db.collection(SHARED_SPACES).document(space.id).set(space.toMap()).await()
@@ -392,9 +333,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Observe shared spaces for user
-     */
     fun observeSharedSpaces(userId: String): Flow<List<SharedSpace>> = callbackFlow {
         val listener = db.collection(SHARED_SPACES)
             .whereArrayContains("memberIds", userId)
@@ -410,9 +348,6 @@ class FirestoreManager {
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Add media to shared space
-     */
     suspend fun addMediaToSpace(spaceId: String, media: Media): Result<String> {
         return try {
             db.collection(SHARED_SPACES)
@@ -422,7 +357,6 @@ class FirestoreManager {
                 .set(media.toMap())
                 .await()
 
-            // Update space media count
             db.collection(SHARED_SPACES).document(spaceId).update(
                 mapOf(
                     "mediaCount" to FieldValue.increment(1),
@@ -438,9 +372,6 @@ class FirestoreManager {
 
     // ==================== PRESENCE OPERATIONS ====================
 
-    /**
-     * Update user presence
-     */
     suspend fun updatePresence(userId: String, isOnline: Boolean): Result<Unit> {
         return try {
             db.collection(PRESENCE).document(userId).set(
@@ -456,9 +387,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Observe user presence
-     */
     fun observePresence(userId: String): Flow<Pair<Boolean, Long>> = callbackFlow {
         val listener = db.collection(PRESENCE).document(userId)
             .addSnapshotListener { snapshot, error ->
@@ -475,9 +403,6 @@ class FirestoreManager {
 
     // ==================== FCM TOKEN OPERATIONS ====================
 
-    /**
-     * Save FCM token
-     */
     suspend fun saveFcmToken(userId: String, token: String): Result<Unit> {
         return try {
             db.collection(FCM_TOKENS).document(userId).set(
@@ -492,9 +417,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Get FCM token for user
-     */
     suspend fun getFcmToken(userId: String): Result<String?> {
         return try {
             val doc = db.collection(FCM_TOKENS).document(userId).get().await()
@@ -506,9 +428,6 @@ class FirestoreManager {
 
     // ==================== FOLLOW OPERATIONS ====================
 
-    /**
-     * Follow user
-     */
     suspend fun followUser(followerId: String, followingId: String): Result<Unit> {
         return try {
             val followId = "${followerId}_${followingId}"
@@ -525,9 +444,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Unfollow user
-     */
     suspend fun unfollowUser(followerId: String, followingId: String): Result<Unit> {
         return try {
             val followId = "${followerId}_${followingId}"
@@ -538,9 +454,6 @@ class FirestoreManager {
         }
     }
 
-    /**
-     * Check if following
-     */
     suspend fun isFollowing(followerId: String, followingId: String): Result<Boolean> {
         return try {
             val followId = "${followerId}_${followingId}"
@@ -660,7 +573,7 @@ class FirestoreManager {
         "caption" to caption,
         "mediaUrls" to mediaUrls,
         "mediaType" to mediaType.name,
-        "createdAt" to createdAt,
+        "timestamp" to timestamp,
         "likeCount" to likeCount,
         "commentCount" to commentCount
     )
@@ -674,7 +587,7 @@ class FirestoreManager {
                 caption = getString("caption"),
                 mediaUrls = get("mediaUrls") as? List<String> ?: emptyList(),
                 mediaType = PostMediaType.valueOf(getString("mediaType") ?: "IMAGE"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
+                timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
                 likeCount = getLong("likeCount")?.toInt() ?: 0,
                 commentCount = getLong("commentCount")?.toInt() ?: 0
             )
@@ -718,7 +631,7 @@ class FirestoreManager {
         "description" to description,
         "creatorId" to creatorId,
         "memberIds" to memberIds,
-        "imageUrl" to imageUrl,
+        "coverImageUrl" to coverImageUrl,
         "createdAt" to createdAt,
         "lastActivityAt" to lastActivityAt,
         "mediaCount" to mediaCount
@@ -733,7 +646,7 @@ class FirestoreManager {
                 description = getString("description"),
                 creatorId = getString("creatorId") ?: "",
                 memberIds = get("memberIds") as? List<String> ?: emptyList(),
-                imageUrl = getString("imageUrl"),
+                coverImageUrl = getString("coverImageUrl"),
                 createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
                 lastActivityAt = getLong("lastActivityAt") ?: System.currentTimeMillis(),
                 mediaCount = getLong("mediaCount")?.toInt() ?: 0
