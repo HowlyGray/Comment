@@ -7,11 +7,13 @@ import com.memoryshare.app.data.repository.CallRepository
 import com.memoryshare.app.data.repository.MessageRepository
 import com.memoryshare.app.data.repository.PostRepository
 import com.memoryshare.app.data.repository.SharedSpaceRepository
+import com.memoryshare.app.data.repository.StoryRepository
 import com.memoryshare.app.data.repository.UserRepository
 import com.memoryshare.app.ui.viewmodel.CallViewModel
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
+import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
 
 class ViewModelFactory(
@@ -35,6 +37,9 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(SharedSpaceViewModel::class.java) -> {
                 SharedSpaceViewModel(repository as SharedSpaceRepository) as T
+            }
+            modelClass.isAssignableFrom(StoryViewModel::class.java) -> {
+                StoryViewModel(repository as StoryRepository) as T
             }
             modelClass.isAssignableFrom(CallViewModel::class.java) -> {
                 CallViewModel(repository as CallRepository) as T
