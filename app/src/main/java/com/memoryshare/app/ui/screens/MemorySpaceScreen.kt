@@ -30,7 +30,8 @@ fun MemorySpaceScreen(
     userViewModel: UserViewModel,
     currentUser: User?,
     onBack: () -> Unit,
-    onAddMedia: () -> Unit
+    onAddMedia: () -> Unit,
+    onNavigateToMediaViewer: (String) -> Unit = {}
 ) {
     val space by viewModel.currentSpace.collectAsState()
     val media by viewModel.media.collectAsState()
@@ -215,7 +216,7 @@ fun MemorySpaceScreen(
                     items(media) { mediaItem ->
                         MediaItem(
                             media = mediaItem,
-                            onClick = { /* Ouvrir le média en plein écran */ }
+                            onClick = { onNavigateToMediaViewer(mediaItem.id) }
                         )
                     }
                 }
