@@ -17,6 +17,12 @@ sealed class Screen(val route: String) {
     object MediaViewer : Screen("media/{postId}") {
         fun createRoute(postId: String) = "media/$postId"
     }
+    object MessageMediaViewer : Screen("message_media/{messageId}") {
+        fun createRoute(messageId: String) = "message_media/$messageId"
+    }
+    object SharedMediaViewer : Screen("shared_media/{mediaId}") {
+        fun createRoute(mediaId: String) = "shared_media/$mediaId"
+    }
     object Memories : Screen("memories")
     object MemorySpace : Screen("memories/{spaceId}") {
         fun createRoute(spaceId: String) = "memories/$spaceId"

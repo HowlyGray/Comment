@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.model.User
@@ -43,7 +45,8 @@ fun MessageDetailScreen(
     onNavigateToContactDetail: (String) -> Unit = {},
     onNavigateToVideoCall: (String) -> Unit = {},
     onNavigateToVoiceCall: (String) -> Unit = {},
-    onNavigateToForward: () -> Unit
+    onNavigateToForward: () -> Unit,
+    onNavigateToMediaViewer: (String) -> Unit = {}
 ) {
     val messages by viewModel.currentMessages.collectAsState()
     val conversation by viewModel.currentConversation.collectAsState()
@@ -517,6 +520,9 @@ fun MessageDetailScreen(
                         onReactionClick = {
                             messageToReact = message
                             showEmojiPicker = true
+                        },
+                        onMediaClick = {
+                            onNavigateToMediaViewer(message.id)
                         }
                     )
                 }
@@ -755,7 +761,8 @@ fun MessageBubble(
     isSelectionMode: Boolean = false,
     onClick: () -> Unit = {},
     onLongPress: () -> Unit,
-    onReactionClick: () -> Unit
+    onReactionClick: () -> Unit,
+    onMediaClick: () -> Unit = {}
 ) {
     val reactions by messageViewModel.getReactionsForMessage(message.id).collectAsState(initial = emptyList())
     Row(
@@ -839,13 +846,96 @@ fun MessageBubble(
                             )
                         }
                         MessageType.IMAGE -> {
-                            Text(text = "[Image]", style = MaterialTheme.typography.bodyMedium)
+                            if (message.mediaUrl != null) {
+                                AsyncImage(
+                                    model = message.mediaUrl,
+                                    contentDescription = message.content,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 300.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onMediaClick() },
+                                    contentScale = ContentScale.Crop
+                                )
+                                if (message.content.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = message.content,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            } else {
+                                Text(text = "[Image]", style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                         MessageType.VIDEO -> {
-                            Text(text = "[Vidéo]", style = MaterialTheme.typography.bodyMedium)
+                            if (message.mediaUrl != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 300.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onMediaClick() }
+                                ) {
+                                    AsyncImage(
+                                        model = message.mediaThumbnailUrl ?: message.mediaUrl,
+                                        contentDescription = message.content,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    // Icône de lecture
+                                    Surface(
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                            .size(56.dp),
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Lecture",
+                                                modifier = Modifier.size(32.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        }
+                                    }
+                                }
+                                if (message.content.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = message.content,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            } else {
+                                Text(text = "[Vidéo]", style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                         MessageType.AUDIO -> {
-                            Text(text = "[Audio]", style = MaterialTheme.typography.bodyMedium)
+                            if (message.mediaUrl != null) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onMediaClick() }
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Mic,
+                                        contentDescription = "Audio",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = message.content.ifBlank { "Message vocal" },
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            } else {
+                                Text(text = "[Audio]", style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                         MessageType.FILE -> {
                             Text(text = "[Fichier]", style = MaterialTheme.typography.bodyMedium)

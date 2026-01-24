@@ -204,7 +204,10 @@ fun AppNavigation(
                 onNavigateToVoiceCall = { userId ->
                     navController.navigate(Screen.Call.createRoute(userId))
                 },
-                onNavigateToForward = { navController.navigate(Screen.ForwardMessages.route) }
+                onNavigateToForward = { navController.navigate(Screen.ForwardMessages.route) },
+                onNavigateToMediaViewer = { messageId ->
+                    navController.navigate(Screen.MessageMediaViewer.createRoute(messageId))
+                }
             )
         }
 
@@ -296,6 +299,51 @@ fun AppNavigation(
             }
         }
 
+        composable(
+            route = Screen.MessageMediaViewer.route,
+            arguments = listOf(navArgument("messageId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) { backStackEntry ->
+            val messageId = backStackEntry.arguments?.getString("messageId") ?: return@composable
+            val messages by messageViewModel.currentMessages.collectAsState()
+            val message = messages.find { it.id == messageId }
+
+            if (message != null && message.mediaUrl != null) {
+                GenericMediaViewerScreen(
+                    mediaUrl = message.mediaUrl,
+                    mediaType = message.type.name,
+                    description = message.content.takeIf { it.isNotBlank() },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable(
+            route = Screen.SharedMediaViewer.route,
+            arguments = listOf(navArgument("mediaId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) { backStackEntry ->
+            val mediaId = backStackEntry.arguments?.getString("mediaId") ?: return@composable
+            val media by spaceViewModel.media.collectAsState()
+            val mediaItem = media.find { it.id == mediaId }
+
+            if (mediaItem != null) {
+                GenericMediaViewerScreen(
+                    mediaUrl = mediaItem.url,
+                    mediaType = mediaItem.type.name,
+                    title = mediaItem.title,
+                    description = mediaItem.description,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
         composable(Screen.Memories.route) {
             MemoriesScreen(
                 viewModel = spaceViewModel,
@@ -336,6 +384,9 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onAddMedia = {
                     navController.navigate(Screen.AddMedia.createRoute(spaceId))
+                },
+                onNavigateToMediaViewer = { mediaId ->
+                    navController.navigate(Screen.SharedMediaViewer.createRoute(mediaId))
                 }
             )
         }
