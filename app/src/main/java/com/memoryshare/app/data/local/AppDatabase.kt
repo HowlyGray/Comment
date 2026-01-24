@@ -25,7 +25,7 @@ import com.memoryshare.app.data.model.*
         SharedSpacePermission::class,
         Call::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
