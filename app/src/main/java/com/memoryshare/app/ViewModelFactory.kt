@@ -1,7 +1,9 @@
 package com.memoryshare.app
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.memoryshare.app.data.local.AppDatabase
 import com.memoryshare.app.data.local.PreferencesManager
 import com.memoryshare.app.data.repository.CallRepository
 import com.memoryshare.app.data.repository.MessageRepository
@@ -15,10 +17,12 @@ import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import com.memoryshare.app.utils.MediaSyncManager
 
 class ViewModelFactory(
     private val repository: Any,
-    private val preferencesManager: PreferencesManager? = null
+    private val preferencesManager: PreferencesManager? = null,
+    private val context: Context? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -33,7 +37,11 @@ class ViewModelFactory(
                 MessageViewModel(repository as MessageRepository) as T
             }
             modelClass.isAssignableFrom(PostViewModel::class.java) -> {
-                PostViewModel(repository as PostRepository) as T
+                val mediaSyncManager = if (context != null) {
+                    val database = AppDatabase.getDatabase(context)
+                    MediaSyncManager(context, database.mediaCacheDao(), database)
+                } else null
+                PostViewModel(repository as PostRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(SharedSpaceViewModel::class.java) -> {
                 SharedSpaceViewModel(repository as SharedSpaceRepository) as T

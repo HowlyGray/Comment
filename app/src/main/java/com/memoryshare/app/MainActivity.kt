@@ -1,5 +1,6 @@
 package com.memoryshare.app
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -93,6 +94,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MemoryShareApp(
+                        context = applicationContext,
                         userRepository = userRepository,
                         messageRepository = messageRepository,
                         postRepository = postRepository,
@@ -109,6 +111,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MemoryShareApp(
+    context: Context,
     userRepository: UserRepository,
     messageRepository: MessageRepository,
     postRepository: PostRepository,
@@ -127,7 +130,7 @@ fun MemoryShareApp(
         factory = ViewModelFactory(messageRepository)
     )
     val postViewModel = viewModel<PostViewModel>(
-        factory = ViewModelFactory(postRepository)
+        factory = ViewModelFactory(postRepository, context = context)
     )
     val spaceViewModel = viewModel<SharedSpaceViewModel>(
         factory = ViewModelFactory(spaceRepository)
