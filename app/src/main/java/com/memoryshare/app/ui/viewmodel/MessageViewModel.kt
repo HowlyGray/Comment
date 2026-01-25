@@ -1,11 +1,17 @@
 package com.memoryshare.app.ui.viewmodel
 
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.memoryshare.app.data.model.Conversation
+import com.memoryshare.app.data.model.MediaQuality
+import com.memoryshare.app.data.model.MediaSourceType
+import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.repository.MessageRepository
+import com.memoryshare.app.utils.MediaSyncManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,8 +19,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MessageViewModel(
-    private val repository: MessageRepository
+    private val repository: MessageRepository,
+    private val mediaSyncManager: MediaSyncManager? = null
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "MessageViewModel"
+    }
 
     private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
     val conversations: StateFlow<List<Conversation>> = _conversations.asStateFlow()
@@ -27,6 +38,12 @@ class MessageViewModel(
 
     private val _messagesToForward = MutableStateFlow<List<String>>(emptyList())
     val messagesToForward: StateFlow<List<String>> = _messagesToForward.asStateFlow()
+
+    private val _uploadProgress = MutableStateFlow<Float?>(null)
+    val uploadProgress: StateFlow<Float?> = _uploadProgress.asStateFlow()
+
+    private val _uploadError = MutableStateFlow<String?>(null)
+    val uploadError: StateFlow<String?> = _uploadError.asStateFlow()
 
     private var loadConversationJob: Job? = null
     private var loadMessagesJob: Job? = null
@@ -72,6 +89,93 @@ class MessageViewModel(
     ) {
         viewModelScope.launch {
             repository.sendMessage(conversationId, senderId, content, type, mediaUrl)
+        }
+    }
+
+    /**
+     * Envoie un message avec média en utilisant le cache local et la compression
+     * @param quality Qualité du média (HD ou SD) pour la compression
+     * @param onSuccess Callback appelé avec l'URL finale du média uploadé
+     */
+    fun sendMessageWithMedia(
+        conversationId: String,
+        senderId: String,
+        mediaUri: Uri,
+        mediaType: MessageType,
+        quality: MediaQuality = MediaQuality.SD,
+        content: String = "",
+        onSuccess: (String) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                // Utiliser MediaSyncManager si disponible pour compression et cache local
+                val finalUrl = if (mediaSyncManager != null) {
+                    Log.d(TAG, "Using MediaSyncManager for message media...")
+                    _uploadProgress.value = 0f
+                    _uploadError.value = null
+
+                    // Convertir MessageType vers MediaType
+                    val cacheMediaType = when (mediaType) {
+                        MessageType.IMAGE -> MediaType.IMAGE
+                        MessageType.VIDEO -> MediaType.VIDEO
+                        MessageType.AUDIO -> MediaType.AUDIO
+                        else -> {
+                            onError("Type de média non supporté")
+                            return@launch
+                        }
+                    }
+
+                    // Préparer le média (compression + stockage local)
+                    val prepareResult = mediaSyncManager.prepareMediaForUpload(
+                        uri = mediaUri,
+                        type = cacheMediaType,
+                        quality = quality,
+                        sourceType = MediaSourceType.MESSAGE,
+                        sourceId = conversationId,
+                        uploadedBy = senderId
+                    )
+
+                    if (prepareResult.isFailure) {
+                        val error = prepareResult.exceptionOrNull()?.message ?: "Erreur de préparation du média"
+                        _uploadError.value = error
+                        onError(error)
+                        return@launch
+                    }
+
+                    val mediaCache = prepareResult.getOrThrow()
+                    _uploadProgress.value = 0.5f
+
+                    // Upload vers Firebase
+                    val uploadResult = mediaSyncManager.uploadMedia(mediaCache)
+
+                    if (uploadResult.isFailure) {
+                        val error = uploadResult.exceptionOrNull()?.message ?: "Erreur d'upload"
+                        _uploadError.value = error
+                        onError(error)
+                        return@launch
+                    }
+
+                    _uploadProgress.value = 1f
+                    val firebaseUrl = uploadResult.getOrThrow()
+                    Log.d(TAG, "Media uploaded successfully with caching: $firebaseUrl")
+                    _uploadProgress.value = null
+                    firebaseUrl
+                } else {
+                    // Fallback: erreur si MediaSyncManager n'est pas disponible
+                    onError("Service de gestion des médias non disponible")
+                    return@launch
+                }
+
+                // Envoyer le message avec l'URL du média
+                Log.d(TAG, "Sending message with media URL: $finalUrl")
+                repository.sendMessage(conversationId, senderId, content, mediaType, finalUrl)
+                onSuccess(finalUrl)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending message with media", e)
+                _uploadError.value = e.message
+                onError(e.message ?: "Erreur d'envoi du message")
+            }
         }
     }
 

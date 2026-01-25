@@ -34,7 +34,11 @@ class ViewModelFactory(
                 ) as T
             }
             modelClass.isAssignableFrom(MessageViewModel::class.java) -> {
-                MessageViewModel(repository as MessageRepository) as T
+                val mediaSyncManager = if (context != null) {
+                    val database = AppDatabase.getDatabase(context)
+                    MediaSyncManager(context, database.mediaCacheDao(), database)
+                } else null
+                MessageViewModel(repository as MessageRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(PostViewModel::class.java) -> {
                 val mediaSyncManager = if (context != null) {
@@ -44,7 +48,11 @@ class ViewModelFactory(
                 PostViewModel(repository as PostRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(SharedSpaceViewModel::class.java) -> {
-                SharedSpaceViewModel(repository as SharedSpaceRepository) as T
+                val mediaSyncManager = if (context != null) {
+                    val database = AppDatabase.getDatabase(context)
+                    MediaSyncManager(context, database.mediaCacheDao(), database)
+                } else null
+                SharedSpaceViewModel(repository as SharedSpaceRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(StoryViewModel::class.java) -> {
                 StoryViewModel(repository as StoryRepository) as T
