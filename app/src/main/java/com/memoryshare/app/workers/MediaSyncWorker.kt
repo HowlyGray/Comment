@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.memoryshare.app.data.local.AppDatabase
+import com.memoryshare.app.utils.FirebaseStorageManager
+import com.memoryshare.app.utils.MediaCompressionManager
 import com.memoryshare.app.utils.MediaSyncManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,10 +36,13 @@ class MediaSyncWorker(
 
             // Initialiser MediaSyncManager
             val database = AppDatabase.getDatabase(applicationContext)
+            val compressionManager = MediaCompressionManager(applicationContext)
+            val storageManager = FirebaseStorageManager()
             val mediaSyncManager = MediaSyncManager(
                 context = applicationContext,
                 mediaCacheDao = database.mediaCacheDao(),
-                database = database
+                compressionManager = compressionManager,
+                storageManager = storageManager
             )
 
             // 1. Upload des médias en attente
