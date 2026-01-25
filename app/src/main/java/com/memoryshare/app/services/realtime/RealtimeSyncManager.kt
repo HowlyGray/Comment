@@ -1,12 +1,12 @@
 package com.memoryshare.app.services.realtime
 
 import android.util.Log
+import com.google.firebase.Firebase
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.firestore
 import com.memoryshare.app.data.local.dao.ConversationDao
 import com.memoryshare.app.data.local.dao.MessageDao
 import com.memoryshare.app.data.model.Conversation

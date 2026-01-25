@@ -3,8 +3,8 @@ package com.memoryshare.app
 import android.app.Application
 import android.util.Log
 import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.memoryshare.app.data.local.AppDatabase
 import com.memoryshare.app.services.calls.AgoraManager
 import com.memoryshare.app.services.firebase.FirebaseAuthManager
