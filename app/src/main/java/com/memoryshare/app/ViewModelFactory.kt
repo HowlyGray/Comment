@@ -17,6 +17,8 @@ import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import com.memoryshare.app.utils.FirebaseStorageManager
+import com.memoryshare.app.utils.MediaCompressionManager
 import com.memoryshare.app.utils.MediaSyncManager
 
 class ViewModelFactory(
@@ -36,21 +38,27 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(MessageViewModel::class.java) -> {
                 val mediaSyncManager = if (context != null) {
                     val database = AppDatabase.getDatabase(context)
-                    MediaSyncManager(context, database.mediaCacheDao(), database)
+                    val compressionManager = MediaCompressionManager(context)
+                    val storageManager = FirebaseStorageManager()
+                    MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
                 } else null
                 MessageViewModel(repository as MessageRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(PostViewModel::class.java) -> {
                 val mediaSyncManager = if (context != null) {
                     val database = AppDatabase.getDatabase(context)
-                    MediaSyncManager(context, database.mediaCacheDao(), database)
+                    val compressionManager = MediaCompressionManager(context)
+                    val storageManager = FirebaseStorageManager()
+                    MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
                 } else null
                 PostViewModel(repository as PostRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(SharedSpaceViewModel::class.java) -> {
                 val mediaSyncManager = if (context != null) {
                     val database = AppDatabase.getDatabase(context)
-                    MediaSyncManager(context, database.mediaCacheDao(), database)
+                    val compressionManager = MediaCompressionManager(context)
+                    val storageManager = FirebaseStorageManager()
+                    MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
                 } else null
                 SharedSpaceViewModel(repository as SharedSpaceRepository, mediaSyncManager) as T
             }
