@@ -184,13 +184,16 @@ fun MessagesScreen(
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
             // Contenu principal
             if (conversations.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                        .fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -211,7 +214,6 @@ fun MessagesScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
                 ) {
                     // Bouton Archivées
                     if (!isSelectionMode) {
@@ -305,7 +307,6 @@ fun MessagesScreen(
                     onClick = onNewConversation,
                     modifier = Modifier
                         .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                        .navigationBarsPadding()
                         .padding(16.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Nouvelle conversation")
