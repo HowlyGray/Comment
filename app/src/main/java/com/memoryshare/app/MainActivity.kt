@@ -1,5 +1,6 @@
 package com.memoryshare.app
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -33,6 +34,7 @@ import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import com.memoryshare.app.utils.MediaSyncScheduler
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,6 +89,20 @@ class MainActivity : ComponentActivity() {
             database.callDao()
         )
 
+        // Initialiser la synchronisation périodique des médias
+        try {
+            MediaSyncScheduler.startPeriodicSync(
+                context = applicationContext,
+                intervalHours = 6,        // Sync toutes les 6 heures
+                cleanupDays = 30,         // Nettoyer les médias de plus de 30 jours
+                requiresCharging = false, // Pas besoin de charge
+                requiresWifi = true       // Uniquement en WiFi pour économiser les données
+            )
+            Log.d("MediaSync", "Periodic media sync scheduled successfully")
+        } catch (e: Exception) {
+            Log.e("MediaSync", "Error scheduling media sync", e)
+        }
+
         setContent {
             MemoryShareTheme {
                 Surface(
@@ -94,6 +110,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MemoryShareApp(
+                        context = applicationContext,
                         userRepository = userRepository,
                         messageRepository = messageRepository,
                         postRepository = postRepository,
@@ -110,6 +127,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MemoryShareApp(
+    context: Context,
     userRepository: UserRepository,
     messageRepository: MessageRepository,
     postRepository: PostRepository,
@@ -125,13 +143,13 @@ fun MemoryShareApp(
         factory = ViewModelFactory(userRepository, preferencesManager)
     )
     val messageViewModel = viewModel<MessageViewModel>(
-        factory = ViewModelFactory(messageRepository)
+        factory = ViewModelFactory(messageRepository, context = context)
     )
     val postViewModel = viewModel<PostViewModel>(
-        factory = ViewModelFactory(postRepository)
+        factory = ViewModelFactory(postRepository, context = context)
     )
     val spaceViewModel = viewModel<SharedSpaceViewModel>(
-        factory = ViewModelFactory(spaceRepository)
+        factory = ViewModelFactory(spaceRepository, context = context)
     )
     val storyViewModel = viewModel<StoryViewModel>(
         factory = ViewModelFactory(storyRepository)

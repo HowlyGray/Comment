@@ -5,12 +5,15 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.memoryshare.app.data.model.Media
+import com.memoryshare.app.data.model.MediaQuality
+import com.memoryshare.app.data.model.MediaSourceType
 import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.PermissionLevel
 import com.memoryshare.app.data.model.SharedSpace
 import com.memoryshare.app.data.model.SharedSpacePermission
 import com.memoryshare.app.data.repository.SharedSpaceRepository
 import com.memoryshare.app.utils.FirebaseStorageManager
+import com.memoryshare.app.utils.MediaSyncManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +21,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class SharedSpaceViewModel(
-    private val repository: SharedSpaceRepository
+    private val repository: SharedSpaceRepository,
+    private val mediaSyncManager: MediaSyncManager? = null
 ) : ViewModel() {
 
     private val _spaces = MutableStateFlow<List<SharedSpace>>(emptyList())
@@ -124,6 +128,7 @@ class SharedSpaceViewModel(
 
     /**
      * Ajoute un média avec upload automatique si c'est un URI local
+     * @param quality Qualité du média (HD ou SD) pour la compression
      */
     fun addMediaWithUpload(
         spaceId: String,
@@ -131,6 +136,7 @@ class SharedSpaceViewModel(
         mediaUri: Uri?,
         mediaUrl: String,
         type: MediaType,
+        quality: MediaQuality = MediaQuality.SD,
         title: String? = null,
         description: String? = null,
         thumbnailUrl: String? = null,
@@ -142,12 +148,55 @@ class SharedSpaceViewModel(
             try {
                 // Vérifier si c'est un URI local ou une URL web
                 val finalUrl = if (mediaUri != null && mediaUrl.startsWith("content://")) {
-                    // Upload vers Firebase Storage
-                    Log.d(TAG, "Uploading local media to Firebase Storage...")
-                    val uploadResult = uploadMedia(mediaUri, type)
-                    uploadResult.getOrElse {
-                        onError("Erreur d'upload: ${it.message}")
-                        return@launch
+                    // Utiliser MediaSyncManager si disponible pour compression et cache local
+                    if (mediaSyncManager != null) {
+                        Log.d(TAG, "Using MediaSyncManager for shared space media...")
+                        _uploadProgress.value = 0f
+                        _uploadError.value = null
+
+                        // Préparer le média (compression + stockage local)
+                        val prepareResult = mediaSyncManager.prepareMediaForUpload(
+                            uri = mediaUri,
+                            type = type,
+                            quality = quality,
+                            sourceType = MediaSourceType.SHARED_SPACE,
+                            sourceId = spaceId,
+                            uploadedBy = uploaderId
+                        )
+
+                        if (prepareResult.isFailure) {
+                            val error = prepareResult.exceptionOrNull()?.message ?: "Erreur de préparation du média"
+                            _uploadError.value = error
+                            onError(error)
+                            return@launch
+                        }
+
+                        val mediaCache = prepareResult.getOrThrow()
+                        _uploadProgress.value = 0.5f
+
+                        // Upload vers Firebase
+                        val uploadResult = mediaSyncManager.uploadMedia(mediaCache)
+
+                        if (uploadResult.isFailure) {
+                            val error = uploadResult.exceptionOrNull()?.message ?: "Erreur d'upload"
+                            _uploadError.value = error
+                            onError(error)
+                            return@launch
+                        }
+
+                        _uploadProgress.value = 1f
+                        val firebaseUrl = uploadResult.getOrThrow()
+                        Log.d(TAG, "Media uploaded successfully with caching: $firebaseUrl")
+                        _uploadProgress.value = null
+                        firebaseUrl
+                    } else {
+                        // Fallback: utiliser l'ancien système sans cache
+                        Log.d(TAG, "MediaSyncManager not available, using legacy upload...")
+                        val uploadResult = uploadMedia(mediaUri, type)
+                        uploadResult.getOrElse {
+                            onError("Erreur d'upload: ${it.message}")
+                            return@launch
+                        }
                     }
                 } else {
                     // C'est déjà une URL web, on l'utilise directement
@@ -160,6 +209,7 @@ class SharedSpaceViewModel(
                 onSuccess()
             } catch (e: Exception) {
                 Log.e(TAG, "Error adding media", e)
+                _uploadError.value = e.message
                 onError(e.message ?: "Erreur lors de l'ajout du média")
             }
         }

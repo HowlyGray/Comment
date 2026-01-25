@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.memoryshare.app.data.model.MediaQuality
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.PostVisibility
 import com.memoryshare.app.data.model.StoryMediaType
@@ -43,6 +44,7 @@ fun CreatePostScreen(
 ) {
     val defaultVisibility by preferencesViewModel.defaultPostVisibility.collectAsState()
     var selectedMediaType by remember { mutableStateOf(PostMediaType.IMAGE) }
+    var selectedQuality by remember { mutableStateOf(MediaQuality.SD) }
     var caption by remember { mutableStateOf("") }
     var mediaUri by remember { mutableStateOf<Uri?>(null) }
     var mediaUrl by remember { mutableStateOf("") }
@@ -104,6 +106,7 @@ fun CreatePostScreen(
                                     mediaUri = mediaUri,
                                     mediaUrl = mediaUrl,
                                     mediaType = selectedMediaType,
+                                    quality = selectedQuality,
                                     caption = caption.ifBlank { null },
                                     visibility = selectedVisibility,
                                     onSuccess = { uploadedUrl ->
@@ -206,6 +209,105 @@ fun CreatePostScreen(
                                 )
                             }
                         )
+                    }
+                }
+            }
+
+            // Sélection de la qualité
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Qualité du média",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Choisissez la qualité pour optimiser la taille et le temps d'upload",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedQuality == MediaQuality.SD,
+                            onClick = { selectedQuality = MediaQuality.SD },
+                            label = {
+                                Column {
+                                    Text("SD - Standard")
+                                    Text(
+                                        "Économique",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.DataSaverOn,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        FilterChip(
+                            selected = selectedQuality == MediaQuality.HD,
+                            onClick = { selectedQuality = MediaQuality.HD },
+                            label = {
+                                Column {
+                                    Text("HD - Haute qualité")
+                                    Text(
+                                        "Qualité maximale",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.HighQuality,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Description de la qualité sélectionnée
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (selectedQuality) {
+                                    MediaQuality.SD -> "Images jusqu'à 1920x1080, compression 80%. Idéal pour économiser des données et de l'espace."
+                                    MediaQuality.HD -> "Images jusqu'à 3840x2160, compression 95%. Meilleure qualité, fichiers plus volumineux."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
