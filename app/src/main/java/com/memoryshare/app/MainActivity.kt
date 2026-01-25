@@ -33,6 +33,7 @@ import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import com.memoryshare.app.utils.MediaSyncScheduler
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +87,20 @@ class MainActivity : ComponentActivity() {
         val callRepository = CallRepository(
             database.callDao()
         )
+
+        // Initialiser la synchronisation périodique des médias
+        try {
+            MediaSyncScheduler.startPeriodicSync(
+                context = applicationContext,
+                intervalHours = 6,        // Sync toutes les 6 heures
+                cleanupDays = 30,         // Nettoyer les médias de plus de 30 jours
+                requiresCharging = false, // Pas besoin de charge
+                requiresWifi = true       // Uniquement en WiFi pour économiser les données
+            )
+            Log.d("MediaSync", "Periodic media sync scheduled successfully")
+        } catch (e: Exception) {
+            Log.e("MediaSync", "Error scheduling media sync", e)
+        }
 
         setContent {
             MemoryShareTheme {
