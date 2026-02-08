@@ -1,18 +1,26 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.memoryshare.app.data.model.PostVisibility
+import com.memoryshare.app.ui.theme.*
 import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,179 +38,259 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Paramètres", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Paramètres",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Spacer(modifier = Modifier.height(4.dp))
+
             // Section Compte
             Text(
                 text = "Compte",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                color = CoralPrimary,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
 
-            SettingsMenuItem(
-                icon = Icons.Default.Person,
-                title = "Mon profil",
-                onClick = onNavigateToProfile
-            )
-
-            SettingsMenuItem(
-                icon = Icons.Default.Email,
-                title = "Email",
-                subtitle = "Gérer votre adresse email",
-                onClick = {}
-            )
-
-            Divider()
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp
+            ) {
+                Column {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Person,
+                        title = "Mon profil",
+                        onClick = onNavigateToProfile
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Email,
+                        title = "Email",
+                        subtitle = "Gérer votre adresse email",
+                        onClick = {}
+                    )
+                }
+            }
 
             // Section Préférences
             Text(
                 text = "Préférences",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                color = CoralPrimary,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
 
-            SettingsMenuItem(
-                icon = Icons.Default.Notifications,
-                title = "Notifications",
-                subtitle = "Gérer les notifications",
-                onClick = {}
-            )
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp
+            ) {
+                Column {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Notifications,
+                        title = "Notifications",
+                        subtitle = "Gérer les notifications",
+                        onClick = {}
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Lock,
+                        title = "Confidentialité",
+                        subtitle = "Contrôlez qui peut voir vos contenus",
+                        onClick = {}
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
-            SettingsMenuItem(
-                icon = Icons.Default.Lock,
-                title = "Confidentialité",
-                subtitle = "Contrôlez qui peut voir vos contenus",
-                onClick = {}
-            )
-
-            ListItem(
-                headlineContent = {
-                    Text("Visibilité par défaut des publications")
-                },
-                supportingContent = {
-                    Text(
-                        text = when (defaultPostVisibility) {
-                            PostVisibility.PUBLIC -> "Public"
-                            PostVisibility.FRIENDS -> "Amis uniquement"
-                            PostVisibility.FOLLOWERS -> "Followers uniquement"
-                            PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
-                            PostVisibility.PRIVATE -> "Privé"
+                    ListItem(
+                        headlineContent = {
+                            Text("Visibilité par défaut des publications")
                         },
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        supportingContent = {
+                            Text(
+                                text = when (defaultPostVisibility) {
+                                    PostVisibility.PUBLIC -> "Public"
+                                    PostVisibility.FRIENDS -> "Amis uniquement"
+                                    PostVisibility.FOLLOWERS -> "Followers uniquement"
+                                    PostVisibility.FRIENDS_AND_FOLLOWERS -> "Amis et followers"
+                                    PostVisibility.PRIVATE -> "Privé"
+                                },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        leadingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                CoralPrimary.copy(alpha = 0.1f),
+                                                VioletPrimary.copy(alpha = 0.1f)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Visibility,
+                                    contentDescription = "Visibilité",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = CoralPrimary
+                                )
+                            }
+                        },
+                        trailingContent = {
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        modifier = Modifier.clickable { showVisibilityDialog = true }
                     )
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = "Visibilité"
-                    )
-                },
-                trailingContent = {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                modifier = Modifier.clickable { showVisibilityDialog = true }
-            )
-
-            Divider()
+                }
+            }
 
             // Section Accessibilité
             Text(
                 text = "Accessibilité",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                color = CoralPrimary,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
 
-            ListItem(
-                headlineContent = {
-                    Text("Boutons pour gauchers")
-                },
-                supportingContent = {
-                    Text(
-                        text = "Placer les boutons d'action à gauche",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.Accessible,
-                        contentDescription = "Accessibilité"
-                    )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = fabOnLeft,
-                        onCheckedChange = { preferencesViewModel.setFabOnLeft(it) }
-                    )
-                }
-            )
-
-            Divider()
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp
+            ) {
+                ListItem(
+                    headlineContent = {
+                        Text("Boutons pour gauchers")
+                    },
+                    supportingContent = {
+                        Text(
+                            text = "Placer les boutons d'action à gauche",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            CoralPrimary.copy(alpha = 0.1f),
+                                            VioletPrimary.copy(alpha = 0.1f)
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Accessible,
+                                contentDescription = "Accessibilité",
+                                modifier = Modifier.size(20.dp),
+                                tint = CoralPrimary
+                            )
+                        }
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = fabOnLeft,
+                            onCheckedChange = { preferencesViewModel.setFabOnLeft(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = CoralPrimary
+                            )
+                        )
+                    }
+                )
+            }
 
             // Section Aide et support
             Text(
                 text = "Aide et support",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                color = CoralPrimary,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
 
-            SettingsMenuItem(
-                icon = Icons.Default.Help,
-                title = "Centre d'aide",
-                onClick = {}
-            )
-
-            SettingsMenuItem(
-                icon = Icons.Default.Info,
-                title = "À propos",
-                subtitle = "Version 1.0.0",
-                onClick = {}
-            )
-
-            Divider()
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp
+            ) {
+                Column {
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Help,
+                        title = "Centre d'aide",
+                        onClick = {}
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsMenuItem(
+                        icon = Icons.Outlined.Info,
+                        title = "À propos",
+                        subtitle = "Version 1.0.0",
+                        onClick = {}
+                    )
+                }
+            }
 
             // Déconnexion
-            SettingsMenuItem(
-                icon = Icons.Default.Logout,
-                title = "Se déconnecter",
-                onClick = onLogout,
-                textColor = MaterialTheme.colorScheme.error
-            )
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp
+            ) {
+                SettingsMenuItem(
+                    icon = Icons.Outlined.Logout,
+                    title = "Se déconnecter",
+                    onClick = onLogout,
+                    textColor = ErrorRose
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
-    // Dialog pour changer la visibilité par défaut
     if (showVisibilityDialog) {
         var selectedVisibility by remember { mutableStateOf(defaultPostVisibility) }
         AlertDialog(
             onDismissRequest = { showVisibilityDialog = false },
-            title = { Text("Visibilité par défaut") },
+            title = { Text("Visibilité par défaut", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
@@ -214,13 +302,15 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable { selectedVisibility = visibility }
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = selectedVisibility == visibility,
-                                onClick = { selectedVisibility = visibility }
+                                onClick = { selectedVisibility = visibility },
+                                colors = RadioButtonDefaults.colors(selectedColor = CoralPrimary)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
@@ -250,6 +340,7 @@ fun SettingsScreen(
                     }
                 }
             },
+            shape = RoundedCornerShape(24.dp),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -257,7 +348,7 @@ fun SettingsScreen(
                         showVisibilityDialog = false
                     }
                 ) {
-                    Text("Enregistrer")
+                    Text("Enregistrer", color = CoralPrimary, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -275,29 +366,39 @@ fun SettingsMenuItem(
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
-    textColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
+    textColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     ListItem(
-        headlineContent = {
-            Text(
-                text = title,
-                color = textColor
-            )
-        },
+        headlineContent = { Text(text = title, color = textColor) },
         supportingContent = subtitle?.let {
-            {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            { Text(text = it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         },
         leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = textColor
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = if (textColor == ErrorRose) {
+                                listOf(ErrorRose.copy(alpha = 0.1f), ErrorRose.copy(alpha = 0.1f))
+                            } else {
+                                listOf(
+                                    CoralPrimary.copy(alpha = 0.1f),
+                                    VioletPrimary.copy(alpha = 0.1f)
+                                )
+                            }
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = textColor.copy(alpha = if (textColor == ErrorRose) 1f else 0.8f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         trailingContent = {
             Icon(

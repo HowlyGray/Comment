@@ -1,18 +1,23 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -21,6 +26,7 @@ import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.SharedSpace
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
+import com.memoryshare.app.ui.theme.*
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,15 +49,26 @@ fun MemoriesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Espaces partagés", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Souvenirs",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
                     IconButton(onClick = { showOptionsMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                        Icon(
+                            Icons.Outlined.MoreVert,
+                            contentDescription = "Options",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
                     DropdownMenu(
                         expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
+                        onDismissRequest = { showOptionsMenu = false },
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         DropdownMenuItem(
                             text = { Text("Paramètres") },
@@ -59,10 +76,13 @@ fun MemoriesScreen(
                                 showOptionsMenu = false
                                 onNavigateToSettings()
                             },
-                            leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                            leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) }
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         bottomBar = {
@@ -73,10 +93,10 @@ fun MemoriesScreen(
                 onNavigateToMemories = {},
                 onNavigateToProfile = onNavigateToProfile
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // Contenu principal
             if (spaces.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -84,25 +104,70 @@ fun MemoriesScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            CoralPrimary.copy(alpha = 0.15f),
+                                            VioletPrimary.copy(alpha = 0.15f)
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(44.dp),
+                                tint = CoralPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
                         Text(
                             text = "Aucun espace partagé",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Créez un espace pour partager vos souvenirs",
+                            text = "Créez un espace pour partager vos souvenirs avec vos proches",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { showCreateDialog = true },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                            contentPadding = PaddingValues(),
+                            modifier = Modifier.height(48.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colors = listOf(CoralPrimary, VioletPrimary)
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "Créer un espace",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(horizontal = 24.dp)
+                                )
+                            }
+                        }
                     }
                 }
             } else {
@@ -111,9 +176,9 @@ fun MemoriesScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                    contentPadding = PaddingValues(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(spaces) { space ->
                         SpaceCard(
@@ -124,15 +189,31 @@ fun MemoriesScreen(
                 }
             }
 
-            // FAB positionné manuellement
-            FloatingActionButton(
-                onClick = { showCreateDialog = true },
-                modifier = Modifier
-                    .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .padding(bottom = 96.dp) // Padding supplémentaire pour éviter la barre de navigation
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nouvel espace")
+            // Gradient FAB
+            if (spaces.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                        .padding(20.dp)
+                        .padding(bottom = 96.dp)
+                ) {
+                    FloatingActionButton(
+                        onClick = { showCreateDialog = true },
+                        shape = RoundedCornerShape(18.dp),
+                        containerColor = Color.Transparent,
+                        contentColor = Color.White,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(CoralPrimary, VioletPrimary)
+                                ),
+                                shape = RoundedCornerShape(18.dp)
+                            )
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Nouvel espace", modifier = Modifier.size(28.dp))
+                    }
+                }
             }
         }
     }
@@ -142,11 +223,7 @@ fun MemoriesScreen(
             onDismiss = { showCreateDialog = false },
             onCreate = { name, description ->
                 if (currentUser != null) {
-                    viewModel.createSpace(
-                        name = name,
-                        creatorId = currentUser.id,
-                        description = description
-                    )
+                    viewModel.createSpace(name = name, creatorId = currentUser.id, description = description)
                 }
                 showCreateDialog = false
             }
@@ -155,16 +232,15 @@ fun MemoriesScreen(
 }
 
 @Composable
-fun SpaceCard(
-    space: SharedSpace,
-    onClick: () -> Unit
-) {
+fun SpaceCard(space: SharedSpace, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
+            .aspectRatio(0.85f)
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Box {
             if (space.coverImageUrl != null) {
@@ -174,68 +250,90 @@ fun SpaceCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                            )
+                        )
+                )
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp),
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    CoralPrimary.copy(alpha = 0.08f),
+                                    VioletPrimary.copy(alpha = 0.08f)
+                                )
+                            )
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PhotoLibrary,
+                        imageVector = Icons.Outlined.AutoAwesome,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = CoralPrimary.copy(alpha = 0.4f)
                     )
                 }
             }
 
-            Surface(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp)
-                ) {
-                    Text(
-                        text = space.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    .align(Alignment.BottomCenter)
+                    .then(
+                        if (space.coverImageUrl == null)
+                            Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f))
+                        else Modifier
                     )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    .padding(14.dp)
+            ) {
+                Text(
+                    text = space.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (space.coverImageUrl != null) Color.White else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Photo,
+                            imageVector = Icons.Outlined.Photo,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.size(14.dp),
+                            tint = if (space.coverImageUrl != null) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = "${space.mediaCount} médias",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "${space.mediaCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (space.coverImageUrl != null) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = Icons.Outlined.Group,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.size(14.dp),
+                            tint = if (space.coverImageUrl != null) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = "${space.memberIds.size} membres",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "${space.memberIds.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (space.coverImageUrl != null) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -246,53 +344,44 @@ fun SpaceCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateSpaceDialog(
-    onDismiss: () -> Unit,
-    onCreate: (String, String?) -> Unit
-) {
+fun CreateSpaceDialog(onDismiss: () -> Unit, onCreate: (String, String?) -> Unit) {
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nouvel espace partagé") },
+        title = { Text("Nouvel espace partagé", fontWeight = FontWeight.Bold) },
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Nom de l'espace") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description (optionnelle)") },
                     modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3
+                    maxLines = 3,
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
         },
+        shape = RoundedCornerShape(24.dp),
         confirmButton = {
             TextButton(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        onCreate(name, description.ifBlank { null })
-                    }
-                },
+                onClick = { if (name.isNotBlank()) onCreate(name, description.ifBlank { null }) },
                 enabled = name.isNotBlank()
             ) {
-                Text("Créer")
+                Text("Créer", color = CoralPrimary, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Annuler")
-            }
+            TextButton(onClick = onDismiss) { Text("Annuler") }
         }
     )
 }
