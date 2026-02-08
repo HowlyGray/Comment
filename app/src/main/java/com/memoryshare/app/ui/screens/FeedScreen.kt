@@ -5,15 +5,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,6 +25,7 @@ import com.memoryshare.app.data.model.Post
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
 import com.memoryshare.app.ui.components.UserAvatar
+import com.memoryshare.app.ui.theme.*
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -48,9 +52,8 @@ fun FeedScreen(
     val allUsers by userViewModel.users.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Pour vous, 1 = Abonnements
+    var selectedTab by remember { mutableStateOf(0) }
 
-    // Charger les posts des abonnements
     LaunchedEffect(currentUser?.id) {
         currentUser?.id?.let { userId ->
             viewModel.loadFollowingPosts(userId)
@@ -63,21 +66,32 @@ fun FeedScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Fil d'actualité", fontWeight = FontWeight.Bold)
-                    }
+                    Text(
+                        "Actualités",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 actions = {
                     IconButton(onClick = onNavigateToReels) {
-                        Icon(Icons.Default.VideoLibrary, contentDescription = "Reels")
+                        Icon(
+                            Icons.Outlined.VideoLibrary,
+                            contentDescription = "Reels",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     IconButton(onClick = { showOptionsMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                        Icon(
+                            Icons.Outlined.MoreVert,
+                            contentDescription = "Options",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
                     DropdownMenu(
                         expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
+                        onDismissRequest = { showOptionsMenu = false },
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         DropdownMenuItem(
                             text = { Text("Paramètres") },
@@ -85,10 +99,13 @@ fun FeedScreen(
                                 showOptionsMenu = false
                                 onNavigateToSettings()
                             },
-                            leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                            leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) }
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         bottomBar = {
@@ -99,75 +116,96 @@ fun FeedScreen(
                 onNavigateToMemories = onNavigateToMemories,
                 onNavigateToProfile = onNavigateToProfile
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize()) {
-            // Tabs pour basculer entre les modes
-            TabRow(
-                selectedTabIndex = selectedTab,
+            // Custom gradient tabs
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = paddingValues.calculateTopPadding())
+                    .padding(top = paddingValues.calculateTopPadding()),
+                color = MaterialTheme.colorScheme.background
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Pour vous") }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Abonnements") }
-                )
-            }
-
-            // Barre de Stories
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Bouton "Votre story"
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { onNavigateToStories() }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Ajouter story",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    Text(
-                        text = "Votre story",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
+                    FilterChipTab(
+                        text = "Pour vous",
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChipTab(
+                        text = "Abonnements",
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        modifier = Modifier.weight(1f)
                     )
                 }
-
-                Text(
-                    text = "Glissez pour voir les stories →",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
             }
 
-            Divider()
+            // Stories bar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { onNavigateToStories() }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                CoralPrimary.copy(alpha = 0.15f),
+                                                VioletPrimary.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Ajouter story",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = CoralPrimary
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Votre story",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
+                    Text(
+                        text = "Glissez pour voir les stories",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                }
+            }
+
+            // Feed content
             Box(modifier = Modifier.fillMaxSize()) {
-                // Contenu principal
                 if (posts.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -175,18 +213,36 @@ fun FeedScreen(
                             .padding(bottom = paddingValues.calculateBottomPadding()),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoLibrary,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                CoralPrimary.copy(alpha = 0.15f),
+                                                VioletPrimary.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Explore,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = CoralPrimary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
                             Text(
                                 text = if (selectedTab == 1) "Aucun abonnement" else "Aucune publication",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -200,7 +256,9 @@ fun FeedScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = paddingValues.calculateBottomPadding())
+                            .padding(bottom = paddingValues.calculateBottomPadding()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         items(posts) { post ->
                             val author = allUsers.find { it.id == post.authorId }
@@ -216,22 +274,74 @@ fun FeedScreen(
                                 onChangeVisibility = { visibility -> viewModel.updatePostVisibility(post, visibility) },
                                 onDeletePost = { viewModel.deletePost(post) }
                             )
-                            Divider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
                         }
                     }
                 }
 
-                // FAB positionné manuellement
-                FloatingActionButton(
-                    onClick = onCreatePost,
+                // Gradient FAB
+                Box(
                     modifier = Modifier
                         .align(if (fabOnLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .padding(bottom = 96.dp) // Padding supplémentaire pour éviter la barre de navigation
+                        .padding(20.dp)
+                        .padding(bottom = 96.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Nouvelle publication")
+                    FloatingActionButton(
+                        onClick = onCreatePost,
+                        shape = RoundedCornerShape(18.dp),
+                        containerColor = Color.Transparent,
+                        contentColor = Color.White,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(CoralPrimary, VioletPrimary)
+                                ),
+                                shape = RoundedCornerShape(18.dp)
+                            )
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Nouvelle publication",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun FilterChipTab(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(38.dp),
+        shape = RoundedCornerShape(19.dp),
+        color = if (selected) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (selected) Modifier.background(
+                        Brush.horizontalGradient(
+                            colors = listOf(CoralPrimary, VioletPrimary)
+                        ),
+                        shape = RoundedCornerShape(19.dp)
+                    ) else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -254,167 +364,203 @@ fun PostItem(
     var showChangeVisibilityDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val isAuthor = post.authorId == currentUser?.id
-    Column(
+
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onPostClick)
+            .padding(horizontal = 12.dp)
+            .clickable(onClick = onPostClick),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp
     ) {
-        // En-tête de la publication
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            UserAvatar(user = author, size = 40.dp)
+        Column {
+            // Post header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                UserAvatar(user = author, size = 40.dp, showStoryRing = true)
 
-            Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = author?.username ?: "Utilisateur",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = formatTime(post.timestamp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Plus")
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = author?.username ?: "Utilisateur",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = formatFeedTime(post.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                if (isAuthor) {
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Modifier la légende") },
-                            onClick = {
-                                showMenu = false
-                                showEditCaptionDialog = true
-                            },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            Icons.Outlined.MoreHoriz,
+                            contentDescription = "Plus",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        DropdownMenuItem(
-                            text = { Text("Changer la visibilité") },
-                            onClick = {
-                                showMenu = false
-                                showChangeVisibilityDialog = true
-                            },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Supprimer") },
-                            onClick = {
-                                showMenu = false
-                                showDeleteConfirmDialog = true
-                            },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                        )
+                    }
+
+                    if (isAuthor) {
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Modifier la légende") },
+                                onClick = {
+                                    showMenu = false
+                                    showEditCaptionDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Changer la visibilité") },
+                                onClick = {
+                                    showMenu = false
+                                    showChangeVisibilityDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Supprimer", color = ErrorRose) },
+                                onClick = {
+                                    showMenu = false
+                                    showDeleteConfirmDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = ErrorRose) }
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        // Média
-        if (post.mediaUrls.isNotEmpty()) {
-            AsyncImage(
-                model = post.mediaUrls.first(),
-                contentDescription = post.caption,
+            // Media
+            if (post.mediaUrls.isNotEmpty()) {
+                AsyncImage(
+                    model = post.mediaUrls.first(),
+                    contentDescription = post.caption,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp)
+                        .clickable { onMediaClick() },
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // Actions row
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
-                    .clickable { onMediaClick() },
-                contentScale = ContentScale.Crop
-            )
-        }
-
-        // Actions
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onLikeClick) {
-                Icon(
-                    imageVector = if (post.isLikedByCurrentUser) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "J'aime",
-                    tint = if (post.isLikedByCurrentUser) MaterialTheme.colorScheme.error else LocalContentColor.current
-                )
-            }
-
-            IconButton(onClick = onCommentClick) {
-                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenter")
-            }
-
-            IconButton(onClick = { /* Partager */ }) {
-                Icon(Icons.Default.Share, contentDescription = "Partager")
-            }
-        }
-
-        // Nombre de likes
-        if (post.likeCount > 0) {
-            Text(
-                text = "${post.likeCount} j'aime",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-        }
-
-        // Légende
-        if (!post.caption.isNullOrBlank()) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = onLikeClick) {
+                    Icon(
+                        imageVector = if (post.isLikedByCurrentUser) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "J'aime",
+                        tint = if (post.isLikedByCurrentUser) LikeRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                IconButton(onClick = onCommentClick) {
+                    Icon(
+                        Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = "Commenter",
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(onClick = { }) {
+                    Icon(
+                        Icons.Outlined.Share,
+                        contentDescription = "Partager",
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(onClick = { }) {
+                    Icon(
+                        Icons.Outlined.BookmarkBorder,
+                        contentDescription = "Sauvegarder",
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Likes count
+            if (post.likeCount > 0) {
                 Text(
-                    text = "${author?.username ?: "Utilisateur"} ",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = post.caption,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "${post.likeCount} j'aime",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
-        }
 
-        // Nombre de commentaires
-        if (post.commentCount > 0) {
-            Text(
-                text = "Voir les ${post.commentCount} commentaires",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .clickable(onClick = onCommentClick)
-            )
-        }
+            // Caption
+            if (!post.caption.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "${author?.username ?: "Utilisateur"} ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = post.caption,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            // Comments count
+            if (post.commentCount > 0) {
+                Text(
+                    text = "Voir les ${post.commentCount} commentaires",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clickable(onClick = onCommentClick)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+        }
     }
 
-    // Dialog pour modifier la légende
+    // Edit caption dialog
     if (showEditCaptionDialog) {
         var editedCaption by remember { mutableStateOf(post.caption ?: "") }
         AlertDialog(
             onDismissRequest = { showEditCaptionDialog = false },
-            title = { Text("Modifier la légende") },
+            title = { Text("Modifier la légende", fontWeight = FontWeight.Bold) },
             text = {
-                TextField(
+                OutlinedTextField(
                     value = editedCaption,
                     onValueChange = { editedCaption = it },
                     placeholder = { Text("Entrez une légende") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
             },
+            shape = RoundedCornerShape(24.dp),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -422,7 +568,7 @@ fun PostItem(
                         showEditCaptionDialog = false
                     }
                 ) {
-                    Text("Enregistrer")
+                    Text("Enregistrer", color = CoralPrimary, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -433,25 +579,27 @@ fun PostItem(
         )
     }
 
-    // Dialog pour changer la visibilité
+    // Visibility dialog
     if (showChangeVisibilityDialog) {
         var selectedVisibility by remember { mutableStateOf(post.visibility) }
         AlertDialog(
             onDismissRequest = { showChangeVisibilityDialog = false },
-            title = { Text("Changer la visibilité") },
+            title = { Text("Changer la visibilité", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     com.memoryshare.app.data.model.PostVisibility.values().forEach { visibility ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable { selectedVisibility = visibility }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = selectedVisibility == visibility,
-                                onClick = { selectedVisibility = visibility }
+                                onClick = { selectedVisibility = visibility },
+                                colors = RadioButtonDefaults.colors(selectedColor = CoralPrimary)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -467,6 +615,7 @@ fun PostItem(
                     }
                 }
             },
+            shape = RoundedCornerShape(24.dp),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -474,7 +623,7 @@ fun PostItem(
                         showChangeVisibilityDialog = false
                     }
                 ) {
-                    Text("Enregistrer")
+                    Text("Enregistrer", color = CoralPrimary, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -485,23 +634,21 @@ fun PostItem(
         )
     }
 
-    // Dialog de confirmation de suppression
+    // Delete confirm dialog
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Supprimer la publication") },
-            text = { Text("Êtes-vous sûr de vouloir supprimer cette publication ? Cette action est irréversible.") },
+            title = { Text("Supprimer la publication", fontWeight = FontWeight.Bold) },
+            text = { Text("Cette action est irréversible. Voulez-vous continuer ?") },
+            shape = RoundedCornerShape(24.dp),
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDeletePost()
                         showDeleteConfirmDialog = false
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    }
                 ) {
-                    Text("Supprimer")
+                    Text("Supprimer", color = ErrorRose, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
@@ -513,7 +660,7 @@ fun PostItem(
     }
 }
 
-private fun formatTime(timestamp: Long): String {
+private fun formatFeedTime(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
     val seconds = diff / 1000
