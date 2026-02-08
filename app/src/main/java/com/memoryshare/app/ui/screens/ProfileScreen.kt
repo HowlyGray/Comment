@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -218,10 +219,12 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .offset(y = (-24).dp),
                 indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[0]),
-                        color = CoralPrimary
-                    )
+                    if (tabPositions.isNotEmpty()) {
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[0]),
+                            color = CoralPrimary
+                        )
+                    }
                 }
             ) {
                 Tab(
