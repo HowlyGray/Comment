@@ -1,5 +1,6 @@
 package com.memoryshare.app.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.memoryshare.app.data.local.PreferencesManager
@@ -34,8 +35,12 @@ class UserViewModel(
     private val _isFollowing = MutableStateFlow(false)
     val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
 
+    companion object {
+        private const val TAG = "UserViewModel"
+    }
+
     init {
-        loadUsers()
+        syncAndLoadUsers()
         restoreCurrentUser()
     }
 
@@ -49,8 +54,19 @@ class UserViewModel(
         }
     }
 
-    private fun loadUsers() {
+    /**
+     * Synchronise les utilisateurs depuis Firebase puis observe la base locale
+     */
+    private fun syncAndLoadUsers() {
         viewModelScope.launch {
+            // Synchroniser d'abord les utilisateurs depuis Firebase
+            try {
+                repository.syncUsersFromFirebase()
+                Log.d(TAG, "Users synced from Firebase")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync users from Firebase", e)
+            }
+            // Puis observer les utilisateurs locaux
             repository.getAllUsers().collect { users ->
                 _users.value = users
             }

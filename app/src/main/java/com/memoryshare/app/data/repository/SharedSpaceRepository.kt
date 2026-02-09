@@ -190,6 +190,21 @@ class SharedSpaceRepository(
         }
     }
 
+    suspend fun updateSharedSpace(space: SharedSpace) {
+        sharedSpaceDao.updateSharedSpace(space)
+        scope.launch {
+            FirebaseManager.saveDocument(
+                collection = FirebaseManager.Collections.SHARED_SPACES,
+                documentId = space.id,
+                data = space
+            ).onSuccess {
+                Log.d(TAG, "Shared space updated in Firebase: ${space.id}")
+            }.onFailure { e ->
+                Log.e(TAG, "Failed to update shared space in Firebase: ${space.id}", e)
+            }
+        }
+    }
+
     suspend fun deleteSharedSpace(space: SharedSpace) {
         // Supprimer localement
         mediaDao.deleteMediaBySpace(space.id)

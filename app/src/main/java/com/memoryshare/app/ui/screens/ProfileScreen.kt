@@ -1,5 +1,8 @@
 package com.memoryshare.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,8 +32,10 @@ import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
 import com.memoryshare.app.ui.components.UserAvatar
 import com.memoryshare.app.ui.theme.*
+import com.memoryshare.app.utils.FirebaseStorageManager
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,10 +51,34 @@ fun ProfileScreen(
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var showOptionsMenu by remember { mutableStateOf(false) }
+    var isUploadingPhoto by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val storageManager = remember { FirebaseStorageManager() }
 
     val userPosts by postViewModel.userPosts.collectAsState()
     val followersCount by viewModel.followersCount.collectAsState()
     val followingCount by viewModel.followingCount.collectAsState()
+
+    // Image picker for profile picture
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            currentUser?.let { user ->
+                isUploadingPhoto = true
+                coroutineScope.launch {
+                    storageManager.uploadProfilePicture(selectedUri, user.id)
+                        .onSuccess { downloadUrl ->
+                            viewModel.updateUser(user.copy(profilePictureUrl = downloadUrl))
+                            isUploadingPhoto = false
+                        }
+                        .onFailure {
+                            isUploadingPhoto = false
+                        }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(currentUser?.id) {
         currentUser?.id?.let { userId ->
@@ -137,11 +166,41 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    UserAvatar(
-                        user = currentUser,
-                        size = 88.dp,
-                        showStoryRing = true
-                    )
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        UserAvatar(
+                            user = currentUser,
+                            size = 88.dp,
+                            showStoryRing = true
+                        )
+                        // Camera icon for profile picture change
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(CoralPrimary, VioletPrimary)
+                                    )
+                                )
+                                .clickable { imagePickerLauncher.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isUploadingPhoto) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Filled.CameraAlt,
+                                    contentDescription = "Changer la photo",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
 
                     // Stats row
                     Row(

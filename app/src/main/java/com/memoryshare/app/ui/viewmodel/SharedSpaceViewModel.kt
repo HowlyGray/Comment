@@ -248,6 +248,12 @@ class SharedSpaceViewModel(
         }
     }
 
+    fun updateSpace(space: SharedSpace) {
+        viewModelScope.launch {
+            repository.updateSharedSpace(space)
+        }
+    }
+
     fun deleteSpace(space: SharedSpace) {
         viewModelScope.launch {
             repository.deleteSharedSpace(space)
