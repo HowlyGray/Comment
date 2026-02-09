@@ -51,12 +51,44 @@ class PostViewModel(
     }
 
     init {
-        loadPosts()
+        syncAndLoadPosts()
     }
 
-    private fun loadPosts() {
+    /**
+     * Synchronise les posts publics depuis Firebase puis charge le feed local
+     */
+    private fun syncAndLoadPosts() {
         viewModelScope.launch {
-            repository.getAllPosts().collect { posts ->
+            // D'abord synchroniser les posts publics depuis Firebase
+            try {
+                repository.syncPostsFromFirebase()
+                Log.d(TAG, "Firebase posts synced successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync posts from Firebase", e)
+            }
+            // Puis observer les posts locaux (incluant ceux synchronisés)
+            repository.getPublicPosts().collect { posts ->
+                _posts.value = posts
+            }
+        }
+    }
+
+    /**
+     * Rafraîchit les posts depuis Firebase
+     */
+    fun refreshPosts() {
+        syncAndLoadPosts()
+    }
+
+    fun loadFeedPosts(currentUserId: String) {
+        viewModelScope.launch {
+            // Synchroniser d'abord
+            try {
+                repository.syncPostsFromFirebase()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync posts from Firebase", e)
+            }
+            repository.getFeedPosts(currentUserId).collect { posts ->
                 _posts.value = posts
             }
         }
@@ -64,6 +96,12 @@ class PostViewModel(
 
     fun loadFollowingPosts(userId: String) {
         viewModelScope.launch {
+            // Synchroniser d'abord
+            try {
+                repository.syncPostsFromFirebase()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync posts from Firebase", e)
+            }
             repository.getFollowingPosts(userId).collect { posts ->
                 _followingPosts.value = posts
             }

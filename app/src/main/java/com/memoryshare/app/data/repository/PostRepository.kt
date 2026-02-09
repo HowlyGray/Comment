@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class PostRepository(
@@ -27,6 +28,10 @@ class PostRepository(
     }
 
     fun getAllPosts(): Flow<List<Post>> = postDao.getAllPosts()
+
+    fun getPublicPosts(): Flow<List<Post>> = postDao.getPublicPosts()
+
+    fun getFeedPosts(currentUserId: String): Flow<List<Post>> = postDao.getFeedPosts(currentUserId)
 
     fun getPostsByUser(userId: String): Flow<List<Post>> = postDao.getPostsByUser(userId)
 
@@ -224,18 +229,49 @@ class PostRepository(
     }
 
     /**
-     * Synchronise les posts depuis Firebase vers la base de données locale
+     * Synchronise les posts publics depuis Firebase vers la base de données locale
+     * Récupère tous les posts publics pour le fil d'actualité
      */
     suspend fun syncPostsFromFirebase() {
-        FirebaseManager.getCollection(
-            collection = FirebaseManager.Collections.POSTS,
-            clazz = Post::class.java
-        ).onSuccess { posts ->
-            posts.forEach { post ->
-                postDao.insertPost(post)
+        try {
+            val querySnapshot = firestore.collection(FirebaseManager.Collections.POSTS)
+                .whereEqualTo("visibility", "PUBLIC")
+                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(100)
+                .get()
+                .await()
+
+            val posts = querySnapshot.documents.mapNotNull { doc ->
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    Post(
+                        id = doc.getString("id") ?: doc.id,
+                        authorId = doc.getString("authorId") ?: "",
+                        caption = doc.getString("caption"),
+                        mediaUrls = doc.get("mediaUrls") as? List<String> ?: emptyList(),
+                        mediaType = PostMediaType.valueOf(doc.getString("mediaType") ?: "IMAGE"),
+                        timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
+                        likeCount = doc.getLong("likeCount")?.toInt() ?: 0,
+                        commentCount = doc.getLong("commentCount")?.toInt() ?: 0,
+                        visibility = try {
+                            com.memoryshare.app.data.model.PostVisibility.valueOf(
+                                doc.getString("visibility") ?: "PUBLIC"
+                            )
+                        } catch (e: Exception) {
+                            com.memoryshare.app.data.model.PostVisibility.PUBLIC
+                        }
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse post: ${doc.id}", e)
+                    null
+                }
             }
-            Log.d(TAG, "Synced ${posts.size} posts from Firebase")
-        }.onFailure { e ->
+
+            if (posts.isNotEmpty()) {
+                postDao.insertPosts(posts)
+            }
+            Log.d(TAG, "Synced ${posts.size} public posts from Firebase")
+        } catch (e: Exception) {
             Log.e(TAG, "Failed to sync posts from Firebase", e)
         }
     }

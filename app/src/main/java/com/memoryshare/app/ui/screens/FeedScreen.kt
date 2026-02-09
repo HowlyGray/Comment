@@ -56,6 +56,7 @@ fun FeedScreen(
 
     LaunchedEffect(currentUser?.id) {
         currentUser?.id?.let { userId ->
+            viewModel.loadFeedPosts(userId)
             viewModel.loadFollowingPosts(userId)
         }
     }

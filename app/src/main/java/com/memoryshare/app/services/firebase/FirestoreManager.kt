@@ -575,7 +575,8 @@ class FirestoreManager {
         "mediaType" to mediaType.name,
         "timestamp" to timestamp,
         "likeCount" to likeCount,
-        "commentCount" to commentCount
+        "commentCount" to commentCount,
+        "visibility" to visibility.name
     )
 
     private fun DocumentSnapshot.toPost(): Post? {
@@ -589,7 +590,12 @@ class FirestoreManager {
                 mediaType = PostMediaType.valueOf(getString("mediaType") ?: "IMAGE"),
                 timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
                 likeCount = getLong("likeCount")?.toInt() ?: 0,
-                commentCount = getLong("commentCount")?.toInt() ?: 0
+                commentCount = getLong("commentCount")?.toInt() ?: 0,
+                visibility = try {
+                    PostVisibility.valueOf(getString("visibility") ?: "PUBLIC")
+                } catch (e: Exception) {
+                    PostVisibility.PUBLIC
+                }
             )
         } catch (e: Exception) {
             null
