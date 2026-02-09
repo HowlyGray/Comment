@@ -140,7 +140,7 @@ fun MemoryShareApp(
 
     // Créer les ViewModels
     val userViewModel = viewModel<UserViewModel>(
-        factory = ViewModelFactory(userRepository, preferencesManager)
+        factory = ViewModelFactory(userRepository, preferencesManager, messageRepository = messageRepository)
     )
     val messageViewModel = viewModel<MessageViewModel>(
         factory = ViewModelFactory(messageRepository, context = context)

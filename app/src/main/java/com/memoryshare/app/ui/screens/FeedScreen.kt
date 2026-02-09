@@ -52,6 +52,7 @@ fun FeedScreen(
     val allPosts by viewModel.posts.collectAsState()
     val followingPosts by viewModel.followingPosts.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
+    val followingUserIds by userViewModel.followingUserIds.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
@@ -265,10 +266,12 @@ fun FeedScreen(
                     ) {
                         items(posts) { post ->
                             val author = allUsers.find { it.id == post.authorId }
+                            val isFollowed = followingUserIds.contains(post.authorId)
                             PostItem(
                                 post = post,
                                 author = author,
                                 currentUser = currentUser,
+                                isFollowedByCurrentUser = isFollowed,
                                 onLikeClick = { viewModel.toggleLike(post) },
                                 onCommentClick = { onPostClick(post.id) },
                                 onPostClick = { onPostClick(post.id) },
@@ -355,6 +358,7 @@ fun PostItem(
     post: Post,
     author: User?,
     currentUser: User?,
+    isFollowedByCurrentUser: Boolean = false,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     onPostClick: () -> Unit,
@@ -401,8 +405,8 @@ fun PostItem(
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
-                        // Follow button for other users' posts
-                        if (!isAuthor) {
+                        // Follow button for other users' posts (hidden if already following)
+                        if (!isAuthor && !isFollowedByCurrentUser) {
                             Box(
                                 modifier = Modifier
                                     .height(24.dp)

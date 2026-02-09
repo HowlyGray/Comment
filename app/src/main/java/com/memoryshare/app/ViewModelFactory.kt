@@ -24,7 +24,8 @@ import com.memoryshare.app.utils.MediaSyncManager
 class ViewModelFactory(
     private val repository: Any,
     private val preferencesManager: PreferencesManager? = null,
-    private val context: Context? = null
+    private val context: Context? = null,
+    private val messageRepository: MessageRepository? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -32,7 +33,8 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(UserViewModel::class.java) -> {
                 UserViewModel(
                     repository as UserRepository,
-                    preferencesManager ?: throw IllegalArgumentException("PreferencesManager required for UserViewModel")
+                    preferencesManager ?: throw IllegalArgumentException("PreferencesManager required for UserViewModel"),
+                    messageRepository
                 ) as T
             }
             modelClass.isAssignableFrom(MessageViewModel::class.java) -> {
