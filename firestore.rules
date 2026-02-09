@@ -24,8 +24,9 @@ service cloud.firestore {
 
     // Posts collection
     match /posts/{postId} {
-      // Anyone can read posts
-      allow read: if true;
+      // Public posts can be read by anyone, private posts only by the author
+      allow read: if resource.data.visibility == 'PUBLIC'
+                    || (isSignedIn() && resource.data.authorId == request.auth.uid);
       // Only signed-in users can create posts
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       // Only the author can update/delete their posts

@@ -9,6 +9,16 @@ interface PostDao {
     @Query("SELECT * FROM posts ORDER BY timestamp DESC")
     fun getAllPosts(): Flow<List<Post>>
 
+    @Query("SELECT * FROM posts WHERE visibility = 'PUBLIC' ORDER BY timestamp DESC")
+    fun getPublicPosts(): Flow<List<Post>>
+
+    @Query("""
+        SELECT * FROM posts
+        WHERE visibility = 'PUBLIC' OR authorId = :currentUserId
+        ORDER BY timestamp DESC
+    """)
+    fun getFeedPosts(currentUserId: String): Flow<List<Post>>
+
     @Query("SELECT * FROM posts WHERE authorId = :userId ORDER BY timestamp DESC")
     fun getPostsByUser(userId: String): Flow<List<Post>>
 
@@ -19,6 +29,7 @@ interface PostDao {
         SELECT posts.* FROM posts
         INNER JOIN user_follows ON posts.authorId = user_follows.followingId
         WHERE user_follows.followerId = :userId
+        AND (posts.visibility = 'PUBLIC' OR posts.visibility = 'FOLLOWERS' OR posts.visibility = 'FRIENDS_AND_FOLLOWERS')
         ORDER BY posts.timestamp DESC
     """)
     fun getFollowingPosts(userId: String): Flow<List<Post>>
