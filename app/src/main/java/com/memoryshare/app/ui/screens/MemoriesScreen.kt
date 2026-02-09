@@ -1,7 +1,12 @@
 package com.memoryshare.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,7 +32,9 @@ import com.memoryshare.app.data.model.SharedSpace
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
 import com.memoryshare.app.ui.theme.*
+import com.memoryshare.app.utils.FirebaseStorageManager
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +52,33 @@ fun MemoriesScreen(
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showOptionsMenu by remember { mutableStateOf(false) }
+    var selectedSpaceForCover by remember { mutableStateOf<SharedSpace?>(null) }
+    var isUploadingCover by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val storageManager = remember { FirebaseStorageManager() }
+
+    // Image picker for cover photo
+    val coverPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            selectedSpaceForCover?.let { space ->
+                isUploadingCover = true
+                coroutineScope.launch {
+                    storageManager.uploadImage(selectedUri, "space_covers")
+                        .onSuccess { downloadUrl ->
+                            viewModel.updateSpace(space.copy(coverImageUrl = downloadUrl))
+                            isUploadingCover = false
+                            selectedSpaceForCover = null
+                        }
+                        .onFailure {
+                            isUploadingCover = false
+                            selectedSpaceForCover = null
+                        }
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -183,7 +217,11 @@ fun MemoriesScreen(
                     items(spaces) { space ->
                         SpaceCard(
                             space = space,
-                            onClick = { onSpaceClick(space.id) }
+                            onClick = { onSpaceClick(space.id) },
+                            onChangeCover = {
+                                selectedSpaceForCover = space
+                                coverPickerLauncher.launch("image/*")
+                            }
                         )
                     }
                 }
@@ -231,13 +269,19 @@ fun MemoriesScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SpaceCard(space: SharedSpace, onClick: () -> Unit) {
+fun SpaceCard(space: SharedSpace, onClick: () -> Unit, onChangeCover: () -> Unit = {}) {
+    var showSpaceMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { showSpaceMenu = true }
+            ),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -337,6 +381,28 @@ fun SpaceCard(space: SharedSpace, onClick: () -> Unit) {
                         )
                     }
                 }
+            }
+
+            // Context menu on long press
+            DropdownMenu(
+                expanded = showSpaceMenu,
+                onDismissRequest = { showSpaceMenu = false },
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Changer la couverture") },
+                    onClick = {
+                        showSpaceMenu = false
+                        onChangeCover()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.PhotoCamera,
+                            contentDescription = null,
+                            tint = CoralPrimary
+                        )
+                    }
+                )
             }
         }
     }

@@ -22,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.Post
+import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
 import com.memoryshare.app.ui.components.UserAvatar
+import com.memoryshare.app.ui.components.VideoPlayer
 import com.memoryshare.app.ui.theme.*
 import com.memoryshare.app.ui.viewmodel.PostViewModel
 import java.text.SimpleDateFormat
@@ -270,6 +272,7 @@ fun FeedScreen(
                                 onLikeClick = { viewModel.toggleLike(post) },
                                 onCommentClick = { onPostClick(post.id) },
                                 onPostClick = { onPostClick(post.id) },
+                                onFollowClick = { userViewModel.toggleFollow(post.authorId) },
                                 onMediaClick = { onMediaClick(post.id) },
                                 onEditCaption = { caption -> viewModel.updatePostCaption(post, caption) },
                                 onChangeVisibility = { visibility -> viewModel.updatePostVisibility(post, visibility) },
@@ -355,6 +358,7 @@ fun PostItem(
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
     onPostClick: () -> Unit,
+    onFollowClick: () -> Unit = {},
     onMediaClick: () -> Unit = {},
     onEditCaption: (String) -> Unit = {},
     onChangeVisibility: (com.memoryshare.app.data.model.PostVisibility) -> Unit = {},
@@ -388,11 +392,39 @@ fun PostItem(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = author?.username ?: "Utilisateur",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = author?.displayName ?: author?.username ?: "Utilisateur",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        // Follow button for other users' posts
+                        if (!isAuthor) {
+                            Box(
+                                modifier = Modifier
+                                    .height(24.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colors = listOf(CoralPrimary, VioletPrimary)
+                                        )
+                                    )
+                                    .clickable { onFollowClick() }
+                                    .padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "Suivre",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = formatFeedTime(post.timestamp),
                         style = MaterialTheme.typography.labelSmall,
@@ -444,17 +476,29 @@ fun PostItem(
                 }
             }
 
-            // Media
+            // Media - with video player support
             if (post.mediaUrls.isNotEmpty()) {
-                AsyncImage(
-                    model = post.mediaUrls.first(),
-                    contentDescription = post.caption,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(320.dp)
-                        .clickable { onMediaClick() },
-                    contentScale = ContentScale.Crop
-                )
+                if (post.mediaType == PostMediaType.VIDEO) {
+                    VideoPlayer(
+                        videoUrl = post.mediaUrls.first(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(320.dp),
+                        autoPlay = false,
+                        showControls = true,
+                        onVideoClick = { onMediaClick() }
+                    )
+                } else {
+                    AsyncImage(
+                        model = post.mediaUrls.first(),
+                        contentDescription = post.caption,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(320.dp)
+                            .clickable { onMediaClick() },
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             // Actions row
