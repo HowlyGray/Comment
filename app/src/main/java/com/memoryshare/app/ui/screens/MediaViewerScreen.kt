@@ -19,6 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.PostMediaType
+import com.memoryshare.app.ui.components.VideoPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,29 +95,12 @@ fun MediaViewerScreen(
                     )
                 }
                 PostMediaType.VIDEO -> {
-                    // TODO: Implémenter le lecteur vidéo
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Download,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Lecteur vidéo à implémenter",
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            mediaUrl,
-                            color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    VideoPlayer(
+                        videoUrl = mediaUrl,
+                        modifier = Modifier.fillMaxSize(),
+                        autoPlay = true,
+                        showControls = true
+                    )
                 }
                 PostMediaType.AUDIO -> {
                     // TODO: Implémenter le lecteur audio

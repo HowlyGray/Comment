@@ -18,6 +18,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.memoryshare.app.ui.components.VideoPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,15 +95,12 @@ fun GenericMediaViewerScreen(
                     )
                 }
                 "VIDEO" -> {
-                    // TODO: Implémenter le lecteur vidéo
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("Lecteur vidéo à implémenter", color = Color.White)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(mediaUrl, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                    }
+                    VideoPlayer(
+                        videoUrl = mediaUrl,
+                        modifier = Modifier.fillMaxSize(),
+                        autoPlay = true,
+                        showControls = true
+                    )
                 }
                 "AUDIO" -> {
                     // TODO: Implémenter le lecteur audio
