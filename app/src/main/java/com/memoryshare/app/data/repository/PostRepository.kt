@@ -234,9 +234,10 @@ class PostRepository(
      */
     suspend fun syncPostsFromFirebase() {
         try {
+            // Requête simple sans orderBy pour éviter l'index composite Firestore
+            // Le tri se fait côté local via Room (ORDER BY timestamp DESC)
             val querySnapshot = firestore.collection(FirebaseManager.Collections.POSTS)
                 .whereEqualTo("visibility", "PUBLIC")
-                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(100)
                 .get()
                 .await()
