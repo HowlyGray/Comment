@@ -237,6 +237,9 @@ fun AppNavigation(
                 },
                 onMediaClick = { postId ->
                     navController.navigate(Screen.MediaViewer.createRoute(postId))
+                },
+                onNavigateToUserProfile = { userId ->
+                    navController.navigate(Screen.ContactDetail.createRoute(userId))
                 }
             )
         }
@@ -272,8 +275,12 @@ fun AppNavigation(
             PostDetailScreen(
                 postId = postId,
                 viewModel = postViewModel,
+                userViewModel = userViewModel,
                 currentUser = currentUser,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToProfile = { userId ->
+                    navController.navigate(Screen.ContactDetail.createRoute(userId))
+                }
             )
         }
 

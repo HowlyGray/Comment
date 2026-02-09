@@ -47,7 +47,8 @@ fun FeedScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToStories: () -> Unit = {},
     onNavigateToReels: () -> Unit = {},
-    onMediaClick: (String) -> Unit = {}
+    onMediaClick: (String) -> Unit = {},
+    onNavigateToUserProfile: (String) -> Unit = {}
 ) {
     val allPosts by viewModel.posts.collectAsState()
     val followingPosts by viewModel.followingPosts.collectAsState()
@@ -279,7 +280,12 @@ fun FeedScreen(
                                 onMediaClick = { onMediaClick(post.id) },
                                 onEditCaption = { caption -> viewModel.updatePostCaption(post, caption) },
                                 onChangeVisibility = { visibility -> viewModel.updatePostVisibility(post, visibility) },
-                                onDeletePost = { viewModel.deletePost(post) }
+                                onDeletePost = { viewModel.deletePost(post) },
+                                onAuthorClick = {
+                                    if (post.authorId != currentUser?.id) {
+                                        onNavigateToUserProfile(post.authorId)
+                                    }
+                                }
                             )
                         }
                     }
@@ -366,7 +372,8 @@ fun PostItem(
     onMediaClick: () -> Unit = {},
     onEditCaption: (String) -> Unit = {},
     onChangeVisibility: (com.memoryshare.app.data.model.PostVisibility) -> Unit = {},
-    onDeletePost: () -> Unit = {}
+    onDeletePost: () -> Unit = {},
+    onAuthorClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showEditCaptionDialog by remember { mutableStateOf(false) }
@@ -391,7 +398,9 @@ fun PostItem(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                UserAvatar(user = author, size = 40.dp, showStoryRing = true)
+                Box(modifier = Modifier.clickable { onAuthorClick() }) {
+                    UserAvatar(user = author, size = 40.dp, showStoryRing = true)
+                }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -403,7 +412,8 @@ fun PostItem(
                         Text(
                             text = author?.displayName ?: author?.username ?: "Utilisateur",
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { onAuthorClick() }
                         )
                         // Follow button for other users' posts (hidden if already following)
                         if (!isAuthor && !isFollowedByCurrentUser) {

@@ -14,10 +14,10 @@ enum class MessageType {
 @Entity(tableName = "messages")
 data class Message(
     @PrimaryKey
-    val id: String,
-    val conversationId: String,
-    val senderId: String,
-    val content: String, // Texte ou URL du média
+    val id: String = "",
+    val conversationId: String = "",
+    val senderId: String = "",
+    val content: String = "", // Texte ou URL du média
     val type: MessageType = MessageType.TEXT,
     val timestamp: Long = System.currentTimeMillis(),
     val isRead: Boolean = false,

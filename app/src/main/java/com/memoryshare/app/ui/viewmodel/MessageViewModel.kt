@@ -49,11 +49,19 @@ class MessageViewModel(
     private var loadMessagesJob: Job? = null
 
     init {
-        loadConversations()
+        syncAndLoadConversations()
     }
 
-    private fun loadConversations() {
+    private fun syncAndLoadConversations() {
         viewModelScope.launch {
+            // Sync conversations from Firebase first
+            try {
+                repository.syncConversationsFromFirebase()
+                Log.d(TAG, "Conversations synced from Firebase")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync conversations from Firebase", e)
+            }
+            // Then observe local conversations
             repository.getAllConversations().collect { conversations ->
                 _conversations.value = conversations
             }
@@ -74,6 +82,12 @@ class MessageViewModel(
         // Annuler la collection précédente
         loadMessagesJob?.cancel()
         loadMessagesJob = viewModelScope.launch {
+            // Sync messages from Firebase first
+            try {
+                repository.syncMessagesFromFirebase()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync messages from Firebase", e)
+            }
             repository.getMessagesByConversation(conversationId).collect { messages ->
                 _currentMessages.value = messages
             }
