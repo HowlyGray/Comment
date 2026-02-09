@@ -1,5 +1,6 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.Comment
+import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.UserAvatar
+import com.memoryshare.app.ui.components.VideoPlayer
 import com.memoryshare.app.ui.viewmodel.PostViewModel
+import com.memoryshare.app.ui.viewmodel.UserViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -27,11 +31,14 @@ import java.util.*
 fun PostDetailScreen(
     postId: String,
     viewModel: PostViewModel,
+    userViewModel: UserViewModel,
     currentUser: User?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToProfile: (String) -> Unit = {}
 ) {
     val post by viewModel.currentPost.collectAsState()
     val comments by viewModel.comments.collectAsState()
+    val allUsers by userViewModel.users.collectAsState()
     var commentText by remember { mutableStateOf("") }
 
     LaunchedEffect(postId) {
@@ -99,21 +106,27 @@ fun PostDetailScreen(
             // Publication
             item {
                 post?.let { currentPost ->
+                    val postAuthor = allUsers.find { it.id == currentPost.authorId }
                     Column {
                         // En-tête
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(12.dp)
+                                .clickable {
+                                    if (currentPost.authorId != currentUser?.id) {
+                                        onNavigateToProfile(currentPost.authorId)
+                                    }
+                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            UserAvatar(user = null, size = 40.dp)
+                            UserAvatar(user = postAuthor, size = 40.dp)
 
                             Spacer(modifier = Modifier.width(12.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Utilisateur",
+                                    text = postAuthor?.displayName ?: postAuthor?.username ?: "Utilisateur",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -127,14 +140,25 @@ fun PostDetailScreen(
 
                         // Média
                         if (currentPost.mediaUrls.isNotEmpty()) {
-                            AsyncImage(
-                                model = currentPost.mediaUrls.first(),
-                                contentDescription = currentPost.caption,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(400.dp),
-                                contentScale = ContentScale.Crop
-                            )
+                            if (currentPost.mediaType == PostMediaType.VIDEO) {
+                                VideoPlayer(
+                                    videoUrl = currentPost.mediaUrls.first(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(400.dp),
+                                    autoPlay = false,
+                                    showControls = true
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = currentPost.mediaUrls.first(),
+                                    contentDescription = currentPost.caption,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(400.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
 
                         // Actions et statistiques
@@ -176,7 +200,7 @@ fun PostDetailScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
                                 Text(
-                                    text = "Utilisateur ",
+                                    text = "${postAuthor?.username ?: "Utilisateur"} ",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -187,7 +211,7 @@ fun PostDetailScreen(
                             }
                         }
 
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         Text(
                             text = "Commentaires",
@@ -201,7 +225,16 @@ fun PostDetailScreen(
 
             // Commentaires
             items(comments) { comment ->
-                CommentItem(comment = comment)
+                val commentAuthor = allUsers.find { it.id == comment.authorId }
+                CommentItem(
+                    comment = comment,
+                    author = commentAuthor,
+                    onAuthorClick = {
+                        if (comment.authorId != currentUser?.id) {
+                            onNavigateToProfile(comment.authorId)
+                        }
+                    }
+                )
             }
 
             if (comments.isEmpty()) {
@@ -225,22 +258,29 @@ fun PostDetailScreen(
 }
 
 @Composable
-fun CommentItem(comment: Comment) {
+fun CommentItem(
+    comment: Comment,
+    author: User? = null,
+    onAuthorClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        UserAvatar(user = null, size = 32.dp)
+        Box(modifier = Modifier.clickable { onAuthorClick() }) {
+            UserAvatar(user = author, size = 32.dp)
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Utilisateur",
+                    text = author?.displayName ?: author?.username ?: "Utilisateur",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { onAuthorClick() }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(

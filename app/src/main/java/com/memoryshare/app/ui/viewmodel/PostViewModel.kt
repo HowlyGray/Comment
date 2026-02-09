@@ -118,6 +118,13 @@ class PostViewModel(
 
     fun loadComments(postId: String) {
         viewModelScope.launch {
+            // Sync comments from Firebase first
+            try {
+                repository.syncCommentsFromFirebase()
+                Log.d(TAG, "Comments synced from Firebase")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to sync comments from Firebase", e)
+            }
             repository.getCommentsByPost(postId).collect { comments ->
                 _comments.value = comments
             }
