@@ -16,6 +16,7 @@ import com.memoryshare.app.data.repository.SharedSpaceRepository
 import com.memoryshare.app.utils.FirebaseManager
 import com.memoryshare.app.utils.FirebaseStorageManager
 import com.memoryshare.app.utils.MediaSyncManager
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,7 @@ class SharedSpaceViewModel(
 
     private val storageManager = FirebaseStorageManager()
     private var spacesObserver: ListenerRegistration? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
 
     companion object {
         private const val TAG = "SharedSpaceViewModel"
@@ -55,6 +57,7 @@ class SharedSpaceViewModel(
     init {
         loadSpaces()
         startSyncing()
+        observeAuthState()
     }
 
     private fun loadSpaces() {
@@ -63,6 +66,23 @@ class SharedSpaceViewModel(
                 _spaces.value = spaces
             }
         }
+    }
+
+    /**
+     * Observe l'état d'authentification pour démarrer la synchronisation
+     * dès que l'utilisateur est connecté (même si le ViewModel a été créé avant l'auth)
+     */
+    private fun observeAuthState() {
+        authListener = FirebaseAuth.AuthStateListener { auth ->
+            if (auth.currentUser != null && spacesObserver == null) {
+                startSyncing()
+            } else if (auth.currentUser == null) {
+                spacesObserver?.remove()
+                spacesObserver = null
+                Log.d(TAG, "User signed out, stopped real-time sync")
+            }
+        }
+        FirebaseManager.auth.addAuthStateListener(authListener!!)
     }
 
     /**
@@ -299,5 +319,6 @@ class SharedSpaceViewModel(
     override fun onCleared() {
         super.onCleared()
         spacesObserver?.remove()
+        authListener?.let { FirebaseManager.auth.removeAuthStateListener(it) }
     }
 }
