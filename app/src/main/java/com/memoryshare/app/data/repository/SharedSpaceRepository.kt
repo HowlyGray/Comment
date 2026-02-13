@@ -9,6 +9,7 @@ import com.memoryshare.app.data.model.Media
 import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.SharedSpace
 import com.memoryshare.app.data.model.SharedSpacePermission
+import com.memoryshare.app.data.model.PermissionLevel
 import com.memoryshare.app.utils.FirebaseManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -141,6 +142,15 @@ class SharedSpaceRepository(
             if (!it.memberIds.contains(userId)) {
                 val updatedSpace = it.copy(memberIds = it.memberIds + userId)
                 updateSharedSpace(updatedSpace)
+
+                // Créer une permission par défaut (LECTURE) pour le nouveau membre
+                val permission = SharedSpacePermission(
+                    id = UUID.randomUUID().toString(),
+                    spaceId = spaceId,
+                    userId = userId,
+                    permission = PermissionLevel.READ
+                )
+                updatePermission(permission)
             }
         }
     }
@@ -256,6 +266,10 @@ class SharedSpaceRepository(
             onUpdate = { spaces ->
                 scope.launch {
                     sharedSpaceDao.insertSharedSpaces(spaces)
+                    // Synchroniser les permissions depuis Firebase pour chaque espace
+                    spaces.forEach { space ->
+                        syncPermissionsForSpace(space.id)
+                    }
                     Log.d(TAG, "Real-time sync: updated ${spaces.size} shared spaces for user $userId")
                 }
             },
@@ -263,6 +277,32 @@ class SharedSpaceRepository(
                 Log.e(TAG, "Error observing shared spaces for user $userId", e)
             }
         )
+    }
+
+    /**
+     * Synchronise les permissions depuis Firebase pour un espace spécifique
+     */
+    private fun syncPermissionsForSpace(spaceId: String) {
+        FirebaseManager.firestore.collection("shared_space_permissions")
+            .whereEqualTo("spaceId", spaceId)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                val permissionsList = querySnapshot.documents.mapNotNull {
+                    try {
+                        it.toObject(SharedSpacePermission::class.java)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error deserializing permission: ${it.id}", e)
+                        null
+                    }
+                }
+                scope.launch {
+                    permissionsList.forEach { permissionDao.insertPermission(it) }
+                    Log.d(TAG, "Synced ${permissionsList.size} permissions for space $spaceId")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to sync permissions for space $spaceId", e)
+            }
     }
 
     /**

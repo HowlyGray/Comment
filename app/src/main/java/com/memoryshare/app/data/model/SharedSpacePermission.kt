@@ -18,9 +18,9 @@ enum class PermissionLevel {
 )
 data class SharedSpacePermission(
     @PrimaryKey
-    val id: String,
-    val spaceId: String,
-    val userId: String,
+    val id: String = "",
+    val spaceId: String = "",
+    val userId: String = "",
     val permission: PermissionLevel = PermissionLevel.READ,
     val grantedAt: Long = System.currentTimeMillis()
 )

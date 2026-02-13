@@ -12,12 +12,12 @@ enum class MediaType {
 @Entity(tableName = "media")
 data class Media(
     @PrimaryKey
-    val id: String,
-    val spaceId: String, // ID de l'espace partagé
-    val uploaderId: String,
-    val url: String,
+    val id: String = "",
+    val spaceId: String = "",
+    val uploaderId: String = "",
+    val url: String = "",
     val thumbnailUrl: String? = null,
-    val type: MediaType,
+    val type: MediaType = MediaType.IMAGE,
     val title: String? = null,
     val description: String? = null,
     val duration: Long? = null, // Pour vidéo/audio en millisecondes
