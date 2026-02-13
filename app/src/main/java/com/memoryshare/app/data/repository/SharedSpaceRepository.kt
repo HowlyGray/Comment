@@ -1,6 +1,7 @@
 package com.memoryshare.app.data.repository
 
 import android.util.Log
+import com.google.firebase.firestore.ListenerRegistration
 import com.memoryshare.app.data.local.dao.MediaDao
 import com.memoryshare.app.data.local.dao.SharedSpaceDao
 import com.memoryshare.app.data.local.dao.SharedSpacePermissionDao
@@ -138,9 +139,8 @@ class SharedSpaceRepository(
         val space = sharedSpaceDao.getSharedSpaceById(spaceId).firstOrNull()
         space?.let {
             if (!it.memberIds.contains(userId)) {
-                sharedSpaceDao.updateSharedSpace(
-                    it.copy(memberIds = it.memberIds + userId)
-                )
+                val updatedSpace = it.copy(memberIds = it.memberIds + userId)
+                updateSharedSpace(updatedSpace)
             }
         }
     }
@@ -148,9 +148,8 @@ class SharedSpaceRepository(
     suspend fun removeMemberFromSpace(spaceId: String, userId: String) {
         val space = sharedSpaceDao.getSharedSpaceById(spaceId).firstOrNull()
         space?.let {
-            sharedSpaceDao.updateSharedSpace(
-                it.copy(memberIds = it.memberIds.filter { id -> id != userId })
-            )
+            val updatedSpace = it.copy(memberIds = it.memberIds.filter { id -> id != userId })
+            updateSharedSpace(updatedSpace)
         }
     }
 
@@ -191,7 +190,7 @@ class SharedSpaceRepository(
     }
 
     suspend fun updateSharedSpace(space: SharedSpace) {
-        sharedSpaceDao.updateSharedSpace(space)
+        sharedSpaceDao.insertSharedSpace(space) // insert/update localement
         scope.launch {
             FirebaseManager.saveDocument(
                 collection = FirebaseManager.Collections.SHARED_SPACES,
@@ -245,36 +244,43 @@ class SharedSpaceRepository(
     }
 
     /**
-     * Synchronise les espaces partagés depuis Firebase vers la base de données locale
+     * Observe en temps réel les espaces partagés dont l'utilisateur est membre
      */
-    suspend fun syncSharedSpacesFromFirebase() {
-        FirebaseManager.getCollection(
+    fun startObservingUserSpaces(userId: String): ListenerRegistration {
+        return FirebaseManager.observeCollection(
             collection = FirebaseManager.Collections.SHARED_SPACES,
-            clazz = SharedSpace::class.java
-        ).onSuccess { spaces ->
-            spaces.forEach { space ->
-                sharedSpaceDao.insertSharedSpace(space)
+            queryBuilder = { query ->
+                query.whereArrayContains("memberIds", userId)
+            },
+            clazz = SharedSpace::class.java,
+            onUpdate = { spaces ->
+                scope.launch {
+                    sharedSpaceDao.insertSharedSpaces(spaces)
+                    Log.d(TAG, "Real-time sync: updated ${spaces.size} shared spaces for user $userId")
+                }
+            },
+            onError = { e ->
+                Log.e(TAG, "Error observing shared spaces for user $userId", e)
             }
-            Log.d(TAG, "Synced ${spaces.size} shared spaces from Firebase")
-        }.onFailure { e ->
-            Log.e(TAG, "Failed to sync shared spaces from Firebase", e)
-        }
+        )
     }
 
     /**
-     * Synchronise les médias depuis Firebase vers la base de données locale
+     * Synchronise les médias depuis Firebase pour un espace spécifique
      */
-    suspend fun syncMediaFromFirebase() {
-        FirebaseManager.getCollection(
-            collection = FirebaseManager.Collections.MEDIA,
-            clazz = Media::class.java
-        ).onSuccess { mediaList ->
-            mediaList.forEach { media ->
-                mediaDao.insertMedia(media)
+    suspend fun syncMediaForSpace(spaceId: String) {
+        FirebaseManager.firestore.collection(FirebaseManager.Collections.MEDIA)
+            .whereEqualTo("spaceId", spaceId)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                val mediaList = querySnapshot.documents.mapNotNull { it.toObject(Media::class.java) }
+                scope.launch {
+                    mediaList.forEach { mediaDao.insertMedia(it) }
+                    Log.d(TAG, "Synced ${mediaList.size} media for space $spaceId")
+                }
             }
-            Log.d(TAG, "Synced ${mediaList.size} media from Firebase")
-        }.onFailure { e ->
-            Log.e(TAG, "Failed to sync media from Firebase", e)
-        }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to sync media for space $spaceId", e)
+            }
     }
 }

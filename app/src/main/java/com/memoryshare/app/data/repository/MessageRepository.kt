@@ -1,6 +1,7 @@
 package com.memoryshare.app.data.repository
 
 import android.util.Log
+import com.google.firebase.firestore.ListenerRegistration
 import com.memoryshare.app.data.local.dao.ConversationDao
 import com.memoryshare.app.data.local.dao.MessageDao
 import com.memoryshare.app.data.local.dao.MessageReactionDao
@@ -15,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class MessageRepository(
@@ -408,5 +410,57 @@ class MessageRepository(
         }.onFailure { e ->
             Log.e(TAG, "Failed to sync messages from Firebase", e)
         }
+    }
+
+    /**
+     * Synchronise uniquement les messages d'une conversation spécifique
+     */
+    suspend fun syncMessagesForConversation(conversationId: String) {
+        try {
+            val querySnapshot = firestore.collection(FirebaseManager.Collections.MESSAGES)
+                .whereEqualTo("conversationId", conversationId)
+                .get()
+                .await()
+            
+            val messages = querySnapshot.documents.mapNotNull { it.toObject(Message::class.java) }
+            messageDao.insertMessages(messages)
+            Log.d(TAG, "Synced ${messages.size} messages for conversation $conversationId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync messages for conversation $conversationId", e)
+        }
+    }
+
+    /**
+     * Démarre une synchronisation en temps réel pour une conversation
+     */
+    fun startRealtimeSync(conversationId: String): ListenerRegistration {
+        return FirebaseManager.observeCollection(
+            collection = FirebaseManager.Collections.MESSAGES,
+            queryBuilder = { it.whereEqualTo("conversationId", conversationId) },
+            clazz = Message::class.java,
+            onUpdate = { messages ->
+                scope.launch {
+                    messageDao.insertMessages(messages)
+                }
+            },
+            onError = { Log.e(TAG, "Error in realtime sync for $conversationId", it) }
+        )
+    }
+
+    /**
+     * Démarre une synchronisation en temps réel pour toutes les conversations de l'utilisateur
+     */
+    fun startConversationsRealtimeSync(userId: String): ListenerRegistration {
+        return FirebaseManager.observeCollection(
+            collection = FirebaseManager.Collections.CONVERSATIONS,
+            queryBuilder = { it.whereArrayContains("participantIds", userId) },
+            clazz = Conversation::class.java,
+            onUpdate = { conversations ->
+                scope.launch {
+                    conversations.forEach { conversationDao.insertConversation(it) }
+                }
+            },
+            onError = { Log.e(TAG, "Error in conversations realtime sync", it) }
+        )
     }
 }

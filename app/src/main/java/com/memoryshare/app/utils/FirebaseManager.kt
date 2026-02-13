@@ -3,6 +3,8 @@ package com.memoryshare.app.utils
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
@@ -134,6 +136,27 @@ object FirebaseManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting collection: $collection", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Observe une collection en temps réel
+     */
+    fun <T> observeCollection(
+        collection: String,
+        queryBuilder: (Query) -> Query = { it },
+        clazz: Class<T>,
+        onUpdate: (List<T>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        val query = queryBuilder(firestore.collection(collection))
+        return query.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                onError(e)
+                return@addSnapshotListener
+            }
+            val items = snapshot?.documents?.mapNotNull { it.toObject(clazz) } ?: emptyList()
+            onUpdate(items)
         }
     }
 

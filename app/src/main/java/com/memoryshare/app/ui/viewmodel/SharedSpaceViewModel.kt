@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
 import com.memoryshare.app.data.model.Media
 import com.memoryshare.app.data.model.MediaQuality
 import com.memoryshare.app.data.model.MediaSourceType
@@ -12,6 +13,7 @@ import com.memoryshare.app.data.model.PermissionLevel
 import com.memoryshare.app.data.model.SharedSpace
 import com.memoryshare.app.data.model.SharedSpacePermission
 import com.memoryshare.app.data.repository.SharedSpaceRepository
+import com.memoryshare.app.utils.FirebaseManager
 import com.memoryshare.app.utils.FirebaseStorageManager
 import com.memoryshare.app.utils.MediaSyncManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +46,7 @@ class SharedSpaceViewModel(
     val uploadError: StateFlow<String?> = _uploadError.asStateFlow()
 
     private val storageManager = FirebaseStorageManager()
+    private var spacesObserver: ListenerRegistration? = null
 
     companion object {
         private const val TAG = "SharedSpaceViewModel"
@@ -51,6 +54,7 @@ class SharedSpaceViewModel(
 
     init {
         loadSpaces()
+        startSyncing()
     }
 
     private fun loadSpaces() {
@@ -58,6 +62,17 @@ class SharedSpaceViewModel(
             repository.getAllSharedSpaces().collect { spaces ->
                 _spaces.value = spaces
             }
+        }
+    }
+
+    /**
+     * Démarre la synchronisation en temps réel des dossiers pour l'utilisateur actuel
+     */
+    private fun startSyncing() {
+        FirebaseManager.getCurrentUserId()?.let { userId ->
+            spacesObserver?.remove()
+            spacesObserver = repository.startObservingUserSpaces(userId)
+            Log.d(TAG, "Started real-time sync for user: $userId")
         }
     }
 
@@ -193,10 +208,11 @@ class SharedSpaceViewModel(
                         // Fallback: utiliser l'ancien système sans cache
                         Log.d(TAG, "MediaSyncManager not available, using legacy upload...")
                         val uploadResult = uploadMedia(mediaUri, type)
-                        uploadResult.getOrElse {
+                        val url = uploadResult.getOrElse {
                             onError("Erreur d'upload: ${it.message}")
                             return@launch
                         }
+                        url
                     }
                 } else {
                     // C'est déjà une URL web, on l'utilise directement
@@ -278,5 +294,10 @@ class SharedSpaceViewModel(
             )
             repository.updatePermission(permission)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        spacesObserver?.remove()
     }
 }

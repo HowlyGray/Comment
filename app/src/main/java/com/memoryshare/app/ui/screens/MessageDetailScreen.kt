@@ -54,6 +54,7 @@ fun MessageDetailScreen(
 ) {
     val messages by viewModel.currentMessages.collectAsState()
     val conversation by viewModel.currentConversation.collectAsState()
+    val isLoading by viewModel.isLoadingMessages.collectAsState()
     val allUsers by userViewModel.users.collectAsState()
     var messageText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -473,41 +474,53 @@ fun MessageDetailScreen(
                     .padding(horizontal = 8.dp),
                 state = listState
             ) {
-                items(messages) { message ->
-                    MessageBubble(
-                        message = message,
-                        isFromCurrentUser = message.senderId == currentUser?.id,
-                        currentUser = currentUser,
-                        allUsers = allUsers,
-                        messageViewModel = viewModel,
-                        isSelected = selectedMessages.contains(message.id),
-                        isSelectionMode = isSelectionMode,
-                        onClick = {
-                            if (isSelectionMode) {
-                                selectedMessages = if (selectedMessages.contains(message.id)) {
-                                    selectedMessages - message.id
-                                } else {
-                                    selectedMessages + message.id
-                                }
-                            }
-                        },
-                        onLongPress = {
-                            if (!isSelectionMode) {
-                                isSelectionMode = true
-                                selectedMessages = setOf(message.id)
-                            } else {
-                                selectedMessage = message
-                                showMessageOptionsMenu = true
-                            }
-                        },
-                        onReactionClick = {
-                            messageToReact = message
-                            showEmojiPicker = true
-                        },
-                        onMediaClick = {
-                            onNavigateToMediaViewer(message.id)
+                if (isLoading && messages.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = CoralPrimary)
                         }
-                    )
+                    }
+                } else {
+                    items(messages) { message ->
+                        MessageBubble(
+                            message = message,
+                            isFromCurrentUser = message.senderId == currentUser?.id,
+                            currentUser = currentUser,
+                            allUsers = allUsers,
+                            messageViewModel = viewModel,
+                            isSelected = selectedMessages.contains(message.id),
+                            isSelectionMode = isSelectionMode,
+                            onClick = {
+                                if (isSelectionMode) {
+                                    selectedMessages = if (selectedMessages.contains(message.id)) {
+                                        selectedMessages - message.id
+                                    } else {
+                                        selectedMessages + message.id
+                                    }
+                                }
+                            },
+                            onLongPress = {
+                                if (!isSelectionMode) {
+                                    isSelectionMode = true
+                                    selectedMessages = setOf(message.id)
+                                } else {
+                                    selectedMessage = message
+                                    showMessageOptionsMenu = true
+                                }
+                            },
+                            onReactionClick = {
+                                messageToReact = message
+                                showEmojiPicker = true
+                            },
+                            onMediaClick = {
+                                onNavigateToMediaViewer(message.id)
+                            }
+                        )
+                    }
                 }
             }
 

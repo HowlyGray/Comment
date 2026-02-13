@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
 import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.MediaQuality
 import com.memoryshare.app.data.model.MediaSourceType
@@ -11,6 +12,7 @@ import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.repository.MessageRepository
+import com.memoryshare.app.utils.FirebaseManager
 import com.memoryshare.app.utils.MediaSyncManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,31 +47,49 @@ class MessageViewModel(
     private val _uploadError = MutableStateFlow<String?>(null)
     val uploadError: StateFlow<String?> = _uploadError.asStateFlow()
 
+    private val _isLoadingMessages = MutableStateFlow(false)
+    val isLoadingMessages: StateFlow<Boolean> = _isLoadingMessages.asStateFlow()
+
     private var loadConversationJob: Job? = null
     private var loadMessagesJob: Job? = null
+    
+    private var messagesListener: ListenerRegistration? = null
+    private var conversationsListener: ListenerRegistration? = null
 
     init {
         syncAndLoadConversations()
     }
 
     private fun syncAndLoadConversations() {
+        val currentUserId = FirebaseManager.getCurrentUserId()
+        
+        // 1. Démarrer la synchronisation temps réel des conversations
+        if (currentUserId != null) {
+            conversationsListener?.remove()
+            conversationsListener = repository.startConversationsRealtimeSync(currentUserId)
+        }
+
+        // 2. Observer la base locale pour les changements (Room)
         viewModelScope.launch {
-            // Sync conversations from Firebase first
-            try {
-                repository.syncConversationsFromFirebase()
-                Log.d(TAG, "Conversations synced from Firebase")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync conversations from Firebase", e)
-            }
-            // Then observe local conversations
             repository.getAllConversations().collect { conversations ->
                 _conversations.value = conversations
+            }
+        }
+        
+        // Initial sync if needed (one shot)
+        viewModelScope.launch {
+            try {
+                repository.syncConversationsFromFirebase()
+            } catch (e: Exception) {
+                Log.e(TAG, "Initial sync failed", e)
             }
         }
     }
 
     fun loadConversation(conversationId: String) {
-        // Annuler la collection précédente
+        // Reset immédiat pour éviter de voir l'ancienne conversation
+        _currentConversation.value = null
+        
         loadConversationJob?.cancel()
         loadConversationJob = viewModelScope.launch {
             repository.getConversationById(conversationId).collect { conversation ->
@@ -79,18 +99,28 @@ class MessageViewModel(
     }
 
     fun loadMessages(conversationId: String) {
-        // Annuler la collection précédente
+        // Reset immédiat des messages et passage en mode chargement
+        _currentMessages.value = emptyList()
+        _isLoadingMessages.value = true
+        
+        // Annuler les travaux et écouteurs précédents
         loadMessagesJob?.cancel()
+        messagesListener?.remove()
+
+        // 1. Démarrer la synchronisation temps réel pour cette conversation spécifique
+        messagesListener = repository.startRealtimeSync(conversationId)
+
+        // 2. Observer la base locale pour mettre à jour l'UI
         loadMessagesJob = viewModelScope.launch {
-            // Sync messages from Firebase first
-            try {
-                repository.syncMessagesFromFirebase()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync messages from Firebase", e)
-            }
             repository.getMessagesByConversation(conversationId).collect { messages ->
                 _currentMessages.value = messages
+                _isLoadingMessages.value = false
             }
+        }
+        
+        // Synchronisation ponctuelle avec Firebase
+        viewModelScope.launch {
+            repository.syncMessagesForConversation(conversationId)
         }
     }
 
@@ -106,11 +136,6 @@ class MessageViewModel(
         }
     }
 
-    /**
-     * Envoie un message avec média en utilisant le cache local et la compression
-     * @param quality Qualité du média (HD ou SD) pour la compression
-     * @param onSuccess Callback appelé avec l'URL finale du média uploadé
-     */
     fun sendMessageWithMedia(
         conversationId: String,
         senderId: String,
@@ -123,13 +148,10 @@ class MessageViewModel(
     ) {
         viewModelScope.launch {
             try {
-                // Utiliser MediaSyncManager si disponible pour compression et cache local
                 val finalUrl = if (mediaSyncManager != null) {
-                    Log.d(TAG, "Using MediaSyncManager for message media...")
                     _uploadProgress.value = 0f
                     _uploadError.value = null
 
-                    // Convertir MessageType vers MediaType
                     val cacheMediaType = when (mediaType) {
                         MessageType.IMAGE -> MediaType.IMAGE
                         MessageType.VIDEO -> MediaType.VIDEO
@@ -140,7 +162,6 @@ class MessageViewModel(
                         }
                     }
 
-                    // Préparer le média (compression + stockage local)
                     val prepareResult = mediaSyncManager.prepareMediaForUpload(
                         uri = mediaUri,
                         type = cacheMediaType,
@@ -160,7 +181,6 @@ class MessageViewModel(
                     val mediaCache = prepareResult.getOrThrow()
                     _uploadProgress.value = 0.5f
 
-                    // Upload vers Firebase
                     val uploadResult = mediaSyncManager.uploadMedia(mediaCache)
 
                     if (uploadResult.isFailure) {
@@ -172,17 +192,13 @@ class MessageViewModel(
 
                     _uploadProgress.value = 1f
                     val firebaseUrl = uploadResult.getOrThrow()
-                    Log.d(TAG, "Media uploaded successfully with caching: $firebaseUrl")
                     _uploadProgress.value = null
                     firebaseUrl
                 } else {
-                    // Fallback: erreur si MediaSyncManager n'est pas disponible
                     onError("Service de gestion des médias non disponible")
                     return@launch
                 }
 
-                // Envoyer le message avec l'URL du média
-                Log.d(TAG, "Sending message with media URL: $finalUrl")
                 repository.sendMessage(conversationId, senderId, content, mediaType, finalUrl)
                 onSuccess(finalUrl)
             } catch (e: Exception) {
@@ -255,7 +271,6 @@ class MessageViewModel(
 
     fun getReactionsForMessage(messageId: String) = repository.getReactionsForMessage(messageId)
 
-    // Starred messages methods
     fun getAllStarredMessages() = repository.getAllStarredMessages()
 
     fun getStarredMessagesByConversation(conversationId: String) =
@@ -267,7 +282,6 @@ class MessageViewModel(
         }
     }
 
-    // Archived conversations methods
     fun getArchivedConversations() = repository.getArchivedConversations()
 
     fun getUnreadArchivedMessagesCount() = repository.getUnreadArchivedMessagesCount()
@@ -284,7 +298,6 @@ class MessageViewModel(
         }
     }
 
-    // Pin conversations methods
     fun pinConversation(conversationId: String, pinned: Boolean) {
         viewModelScope.launch {
             repository.pinConversation(conversationId, pinned)
@@ -297,7 +310,6 @@ class MessageViewModel(
         }
     }
 
-    // Mute conversations methods
     fun muteConversation(conversationId: String, muted: Boolean) {
         viewModelScope.launch {
             repository.muteConversation(conversationId, muted)
@@ -310,44 +322,43 @@ class MessageViewModel(
         }
     }
 
-    // Delete multiple conversations
     fun deleteMultipleConversations(conversationIds: List<String>) {
         viewModelScope.launch {
             repository.deleteMultipleConversations(conversationIds)
         }
     }
 
-    // Delete multiple messages
     fun deleteMultipleMessages(messageIds: List<String>) {
         viewModelScope.launch {
             repository.deleteMultipleMessages(messageIds)
         }
     }
 
-    // Star multiple messages
     fun starMultipleMessages(messageIds: List<String>, starred: Boolean) {
         viewModelScope.launch {
             repository.starMultipleMessages(messageIds, starred)
         }
     }
 
-    // Forward messages
     fun forwardMessages(messageIds: List<String>, targetConversationId: String, senderId: String) {
         viewModelScope.launch {
             repository.forwardMessages(messageIds, targetConversationId, senderId)
         }
     }
 
-    // Store messages to forward temporarily
     fun setMessagesToForward(messageIds: List<String>) {
         _messagesToForward.value = messageIds
     }
 
-    // Clear messages to forward
     fun clearMessagesToForward() {
         _messagesToForward.value = emptyList()
     }
 
-    // Conversation by ID
     fun getConversationById(conversationId: String) = repository.getConversationById(conversationId)
+
+    override fun onCleared() {
+        super.onCleared()
+        messagesListener?.remove()
+        conversationsListener?.remove()
+    }
 }

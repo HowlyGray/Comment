@@ -1,5 +1,6 @@
 package com.memoryshare.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -40,6 +41,7 @@ fun MemorySpaceScreen(
     var selectedFilter by remember { mutableStateOf<MediaType?>(null) }
     var showFilterMenu by remember { mutableStateOf(false) }
     var showPermissionsDialog by remember { mutableStateOf(false) }
+    var showAddMemberDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(spaceId, selectedFilter) {
         viewModel.loadSpace(spaceId)
@@ -103,7 +105,7 @@ fun MemorySpaceScreen(
                     }
 
                     IconButton(onClick = { showPermissionsDialog = true }) {
-                        Icon(Icons.Default.Group, contentDescription = "Gérer les permissions")
+                        Icon(Icons.Default.Group, contentDescription = "Gérer les membres")
                     }
 
                     IconButton(onClick = { /* Plus d'options */ }) {
@@ -232,11 +234,25 @@ fun MemorySpaceScreen(
             allUsers = allUsers,
             currentUser = currentUser,
             onDismiss = { showPermissionsDialog = false },
+            onAddMember = { showAddMemberDialog = true },
             onPermissionChange = { userId, permissionLevel ->
                 viewModel.updatePermission(spaceId, userId, permissionLevel)
             },
             onRemoveMember = { userId ->
                 viewModel.removeMember(spaceId, userId)
+            }
+        )
+    }
+
+    // Dialog d'ajout de membre
+    if (showAddMemberDialog) {
+        AddMemberDialog(
+            allUsers = allUsers,
+            existingMemberIds = space?.memberIds ?: emptyList(),
+            onDismiss = { showAddMemberDialog = false },
+            onUserSelected = { user ->
+                viewModel.addMember(spaceId, user.id)
+                showAddMemberDialog = false
             }
         )
     }
@@ -250,6 +266,7 @@ fun PermissionsDialog(
     allUsers: List<User>,
     currentUser: User?,
     onDismiss: () -> Unit,
+    onAddMember: () -> Unit,
     onPermissionChange: (String, PermissionLevel) -> Unit,
     onRemoveMember: (String) -> Unit
 ) {
@@ -257,11 +274,11 @@ fun PermissionsDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text("Gérer les permissions", fontWeight = FontWeight.Bold)
+                Text("Gérer les membres", fontWeight = FontWeight.Bold)
                 space?.let {
                     Text(
                         text = it.name,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -274,6 +291,19 @@ fun PermissionsDialog(
                     .heightIn(max = 400.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    Button(
+                        onClick = onAddMember,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(12.dp)
+                    ) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Inviter un contact")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 if (space != null) {
                     items(space.memberIds) { userId ->
                         val user = allUsers.find { it.id == userId }
@@ -299,10 +329,7 @@ fun PermissionsDialog(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                     // Aide sur les permissions
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -327,7 +354,7 @@ fun PermissionsDialog(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "• LECTURE : Peut voir les médias• ÉCRITURE : Peut ajouter et supprimer des médias",
+                                text = "• LECTURE : Peut voir les médias\n• ÉCRITURE : Peut ajouter et supprimer des médias",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
@@ -339,6 +366,77 @@ fun PermissionsDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Fermer")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddMemberDialog(
+    allUsers: List<User>,
+    existingMemberIds: List<String>,
+    onDismiss: () -> Unit,
+    onUserSelected: (User) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredUsers = allUsers.filter { user ->
+        !existingMemberIds.contains(user.id) &&
+                (user.displayName.contains(searchQuery, ignoreCase = true) ||
+                        user.email.contains(searchQuery, ignoreCase = true))
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Inviter un membre", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Rechercher un contact...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (filteredUsers.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Aucun contact trouvé",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        items(filteredUsers) { user ->
+                            ListItem(
+                                headlineContent = { Text(user.displayName) },
+                                supportingContent = { Text(user.email) },
+                                leadingContent = { UserAvatar(user = user, size = 32.dp) },
+                                modifier = Modifier.clickable { onUserSelected(user) }
+                            )
+                            Divider()
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
             }
         }
     )
@@ -370,11 +468,12 @@ fun MemberPermissionItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = user?.displayName ?: "Utilisateur",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     if (isOwner) {
                         Spacer(modifier = Modifier.width(8.dp))
