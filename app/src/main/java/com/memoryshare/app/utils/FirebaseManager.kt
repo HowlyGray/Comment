@@ -155,7 +155,14 @@ object FirebaseManager {
                 onError(e)
                 return@addSnapshotListener
             }
-            val items = snapshot?.documents?.mapNotNull { it.toObject(clazz) } ?: emptyList()
+            val items = snapshot?.documents?.mapNotNull { doc ->
+                try {
+                    doc.toObject(clazz)
+                } catch (ex: Exception) {
+                    Log.e(TAG, "Error deserializing document: ${doc.id} in $collection", ex)
+                    null
+                }
+            } ?: emptyList()
             onUpdate(items)
         }
     }
