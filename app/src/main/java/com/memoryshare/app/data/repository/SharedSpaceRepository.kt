@@ -266,9 +266,10 @@ class SharedSpaceRepository(
             onUpdate = { spaces ->
                 scope.launch {
                     sharedSpaceDao.insertSharedSpaces(spaces)
-                    // Synchroniser les permissions depuis Firebase pour chaque espace
+                    // Synchroniser les permissions et médias depuis Firebase pour chaque espace
                     spaces.forEach { space ->
                         syncPermissionsForSpace(space.id)
+                        syncMediaForSpace(space.id)
                     }
                     Log.d(TAG, "Real-time sync: updated ${spaces.size} shared spaces for user $userId")
                 }
