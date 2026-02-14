@@ -48,6 +48,13 @@ fun MemoriesScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
+    // Garantir que la synchronisation Firestore est active quand l'écran est affiché
+    LaunchedEffect(currentUser?.id) {
+        if (currentUser != null) {
+            viewModel.ensureSyncing()
+        }
+    }
+
     val spaces by viewModel.spaces.collectAsState()
     val fabOnLeft by preferencesViewModel.fabOnLeft.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }

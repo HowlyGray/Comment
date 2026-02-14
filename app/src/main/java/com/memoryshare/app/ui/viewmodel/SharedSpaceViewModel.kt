@@ -55,9 +55,8 @@ class SharedSpaceViewModel(
     }
 
     init {
-        loadSpaces()
-        startSyncing()
         observeAuthState()
+        loadSpaces()
     }
 
     private fun loadSpaces() {
@@ -74,15 +73,28 @@ class SharedSpaceViewModel(
      */
     private fun observeAuthState() {
         authListener = FirebaseAuth.AuthStateListener { auth ->
-            if (auth.currentUser != null && spacesObserver == null) {
+            val user = auth.currentUser
+            if (user != null) {
+                Log.d(TAG, "Auth state: user authenticated (${user.uid}), starting sync")
                 startSyncing()
-            } else if (auth.currentUser == null) {
+            } else {
                 spacesObserver?.remove()
                 spacesObserver = null
-                Log.d(TAG, "User signed out, stopped real-time sync")
+                Log.d(TAG, "Auth state: user signed out, stopped real-time sync")
             }
         }
         FirebaseManager.auth.addAuthStateListener(authListener!!)
+    }
+
+    /**
+     * Appelé depuis l'UI pour garantir que la synchronisation est active
+     * quand l'écran Souvenirs est affiché et l'utilisateur est connecté
+     */
+    fun ensureSyncing() {
+        if (spacesObserver == null) {
+            Log.d(TAG, "ensureSyncing: no active observer, attempting to start sync")
+            startSyncing()
+        }
     }
 
     /**
