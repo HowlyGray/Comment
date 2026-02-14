@@ -3,10 +3,12 @@ package com.memoryshare.app.data.repository
 import android.util.Log
 import com.memoryshare.app.data.local.dao.CommentDao
 import com.memoryshare.app.data.local.dao.PostDao
+import com.memoryshare.app.data.local.dao.UserFollowDao
 import com.memoryshare.app.data.model.Comment
 import com.memoryshare.app.data.model.Post
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.utils.FirebaseManager
+import com.memoryshare.app.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,7 +20,9 @@ import java.util.UUID
 
 class PostRepository(
     private val postDao: PostDao,
-    private val commentDao: CommentDao
+    private val commentDao: CommentDao,
+    private val userFollowDao: UserFollowDao? = null,
+    private val context: android.content.Context? = null
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val firestore = FirebaseManager.firestore
@@ -269,6 +273,30 @@ class PostRepository(
             }
 
             if (posts.isNotEmpty()) {
+                // Détecter les nouveaux posts d'utilisateurs suivis pour les notifications
+                if (context != null && userFollowDao != null) {
+                    try {
+                        val currentUserId = FirebaseManager.getCurrentUserId()
+                        if (currentUserId != null) {
+                            val existingPostIds = postDao.getAllPostIds().toSet()
+                            val newPosts = posts.filter { it.id !in existingPostIds }
+                            if (newPosts.isNotEmpty()) {
+                                val followingIds = userFollowDao.getFollowingIdsSync(currentUserId).toSet()
+                                val newPostsFromFollowed = newPosts.filter { it.authorId in followingIds && it.authorId != currentUserId }
+                                for (post in newPostsFromFollowed) {
+                                    NotificationHelper.notifyNewPost(
+                                        context = context,
+                                        authorName = post.authorId,
+                                        postPreview = post.caption
+                                    )
+                                    Log.d(TAG, "Notification: new post from followed user ${post.authorId}")
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to check for new post notifications", e)
+                    }
+                }
                 postDao.insertPosts(posts)
             }
             Log.d(TAG, "Synced ${posts.size} public posts from Firebase")

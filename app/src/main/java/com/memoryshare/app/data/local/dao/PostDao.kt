@@ -46,6 +46,9 @@ interface PostDao {
     @Delete
     suspend fun deletePost(post: Post)
 
+    @Query("SELECT id FROM posts")
+    suspend fun getAllPostIds(): List<String>
+
     @Query("DELETE FROM posts")
     suspend fun deleteAllPosts()
 }

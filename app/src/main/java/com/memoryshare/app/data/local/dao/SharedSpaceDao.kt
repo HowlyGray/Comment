@@ -26,4 +26,10 @@ interface SharedSpaceDao {
 
     @Query("DELETE FROM shared_spaces")
     suspend fun deleteAllSharedSpaces()
+
+    @Query("SELECT * FROM shared_spaces WHERE id = :spaceId")
+    suspend fun getSharedSpaceByIdSync(spaceId: String): SharedSpace?
+
+    @Query("SELECT * FROM shared_spaces")
+    suspend fun getAllSharedSpacesSync(): List<SharedSpace>
 }

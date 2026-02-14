@@ -10,7 +10,9 @@ import com.memoryshare.app.data.model.MediaType
 import com.memoryshare.app.data.model.SharedSpace
 import com.memoryshare.app.data.model.SharedSpacePermission
 import com.memoryshare.app.data.model.PermissionLevel
+import com.memoryshare.app.data.local.PreferencesManager
 import com.memoryshare.app.utils.FirebaseManager
+import com.memoryshare.app.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,10 +24,12 @@ import java.util.UUID
 class SharedSpaceRepository(
     private val sharedSpaceDao: SharedSpaceDao,
     private val mediaDao: MediaDao,
-    private val permissionDao: SharedSpacePermissionDao
+    private val permissionDao: SharedSpacePermissionDao,
+    private val context: android.content.Context? = null
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val firestore = FirebaseManager.firestore
+    private val preferencesManager = context?.let { PreferencesManager(it) }
 
     companion object {
         private const val TAG = "SharedSpaceRepository"
@@ -265,6 +269,10 @@ class SharedSpaceRepository(
             clazz = SharedSpace::class.java,
             onUpdate = { spaces ->
                 scope.launch {
+                    // Détecter les nouveaux espaces (invitations) avant d'insérer
+                    val existingSpaceIds = sharedSpaceDao.getAllSharedSpacesSync().map { it.id }.toSet()
+                    val newSpaces = spaces.filter { it.id !in existingSpaceIds && it.creatorId != userId }
+
                     sharedSpaceDao.insertSharedSpaces(spaces)
                     // Synchroniser les permissions et médias depuis Firebase pour chaque espace
                     spaces.forEach { space ->
@@ -272,6 +280,18 @@ class SharedSpaceRepository(
                         syncMediaForSpace(space.id)
                     }
                     Log.d(TAG, "Real-time sync: updated ${spaces.size} shared spaces for user $userId")
+
+                    // Notifier les nouvelles invitations
+                    if (newSpaces.isNotEmpty() && context != null) {
+                        newSpaces.forEach { space ->
+                            NotificationHelper.notifySpaceInvitation(
+                                context = context,
+                                spaceName = space.name,
+                                inviterName = "Un contact",
+                                spaceId = space.id
+                            )
+                        }
+                    }
                 }
             },
             onError = { e ->
@@ -308,8 +328,12 @@ class SharedSpaceRepository(
 
     /**
      * Synchronise les médias depuis Firebase pour un espace spécifique
+     * et envoie une notification si de nouveaux médias sont détectés
      */
     suspend fun syncMediaForSpace(spaceId: String) {
+        // Compter les médias locaux avant sync pour détecter les nouveaux
+        val localMediaCount = mediaDao.getMediaCountForSpace(spaceId)
+
         FirebaseManager.firestore.collection(FirebaseManager.Collections.MEDIA)
             .whereEqualTo("spaceId", spaceId)
             .get()
@@ -318,6 +342,27 @@ class SharedSpaceRepository(
                 scope.launch {
                     mediaList.forEach { mediaDao.insertMedia(it) }
                     Log.d(TAG, "Synced ${mediaList.size} media for space $spaceId")
+
+                    // Notifier s'il y a de nouveaux médias (pas uploadés par nous)
+                    val currentUserId = FirebaseManager.getCurrentUserId()
+                        ?: preferencesManager?.getCurrentUserId()
+
+                    if (mediaList.size > localMediaCount && context != null) {
+                        val newMedia = mediaList
+                            .sortedByDescending { it.createdAt }
+                            .firstOrNull { it.uploaderId != currentUserId }
+
+                        if (newMedia != null) {
+                            val space = sharedSpaceDao.getSharedSpaceByIdSync(spaceId)
+                            val spaceName = space?.name ?: "Espace partagé"
+                            NotificationHelper.notifyNewMediaInSpace(
+                                context = context,
+                                spaceName = spaceName,
+                                uploaderName = "Un membre",
+                                spaceId = spaceId
+                            )
+                        }
+                    }
                 }
             }
             .addOnFailureListener { e ->

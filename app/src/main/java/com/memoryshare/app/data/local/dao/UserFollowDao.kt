@@ -27,6 +27,9 @@ interface UserFollowDao {
     @Query("DELETE FROM user_follows WHERE followerId = :followerId AND followingId = :followingId")
     suspend fun deleteFollow(followerId: String, followingId: String)
 
+    @Query("SELECT followingId FROM user_follows WHERE followerId = :userId")
+    suspend fun getFollowingIdsSync(userId: String): List<String>
+
     @Query("DELETE FROM user_follows WHERE followerId = :userId OR followingId = :userId")
     suspend fun deleteAllFollowsForUser(userId: String)
 }

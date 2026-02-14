@@ -36,6 +36,7 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
         const val CHANNEL_MESSAGES = "memoryshare_messages"
         const val CHANNEL_CALLS = "memoryshare_calls"
         const val CHANNEL_STORIES = "memoryshare_stories"
+        const val CHANNEL_SHARED_SPACES = "memoryshare_shared_spaces"
         const val CHANNEL_GENERAL = "memoryshare_general"
 
         // Notification types
@@ -45,6 +46,9 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
         const val TYPE_FOLLOW = "follow"
         const val TYPE_LIKE = "like"
         const val TYPE_COMMENT = "comment"
+        const val TYPE_SPACE_MEDIA = "space_media"
+        const val TYPE_SPACE_INVITE = "space_invite"
+        const val TYPE_NEW_POST = "new_post"
 
         // Data keys
         const val KEY_TYPE = "type"
@@ -112,6 +116,9 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
             TYPE_FOLLOW -> handleFollowNotification(data)
             TYPE_LIKE -> handleLikeNotification(data)
             TYPE_COMMENT -> handleCommentNotification(data)
+            TYPE_SPACE_MEDIA -> handleSpaceMediaNotification(data)
+            TYPE_SPACE_INVITE -> handleSpaceInviteNotification(data)
+            TYPE_NEW_POST -> handleNewPostNotification(data)
             else -> {
                 Log.w(TAG, "Unknown notification type: $type")
             }
@@ -288,6 +295,47 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
     }
 
     /**
+     * Handle new media in shared space notification
+     */
+    private fun handleSpaceMediaNotification(data: Map<String, String>) {
+        val senderName = data[KEY_SENDER_NAME] ?: "Quelqu'un"
+        val spaceName = data["spaceName"] ?: "un espace partagé"
+
+        showSimpleNotification(
+            title = spaceName,
+            body = "$senderName a ajouté un nouveau média",
+            channelId = CHANNEL_SHARED_SPACES
+        )
+    }
+
+    /**
+     * Handle shared space invitation notification
+     */
+    private fun handleSpaceInviteNotification(data: Map<String, String>) {
+        val senderName = data[KEY_SENDER_NAME] ?: "Quelqu'un"
+        val spaceName = data["spaceName"] ?: "un espace partagé"
+
+        showSimpleNotification(
+            title = "Invitation",
+            body = "$senderName vous a invité dans \"$spaceName\"",
+            channelId = CHANNEL_SHARED_SPACES
+        )
+    }
+
+    /**
+     * Handle new post notification from followed user
+     */
+    private fun handleNewPostNotification(data: Map<String, String>) {
+        val senderName = data[KEY_SENDER_NAME] ?: "Quelqu'un"
+
+        showSimpleNotification(
+            title = "Nouvelle publication",
+            body = "$senderName a publié quelque chose",
+            channelId = CHANNEL_GENERAL
+        )
+    }
+
+    /**
      * Show simple notification
      */
     private fun showSimpleNotification(title: String, body: String, channelId: String) {
@@ -355,6 +403,16 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
                 description = "Story notifications"
             }
 
+            // Shared spaces channel
+            val sharedSpacesChannel = NotificationChannel(
+                CHANNEL_SHARED_SPACES,
+                "Espaces partagés",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Notifications pour les espaces partagés (médias, invitations)"
+                enableLights(true)
+            }
+
             // General channel
             val generalChannel = NotificationChannel(
                 CHANNEL_GENERAL,
@@ -365,7 +423,7 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
             }
 
             notificationManager.createNotificationChannels(
-                listOf(messagesChannel, callsChannel, storiesChannel, generalChannel)
+                listOf(messagesChannel, callsChannel, storiesChannel, sharedSpacesChannel, generalChannel)
             )
         }
     }

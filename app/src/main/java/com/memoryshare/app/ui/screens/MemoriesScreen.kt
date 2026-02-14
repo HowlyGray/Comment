@@ -226,10 +226,14 @@ fun MemoriesScreen(
                     items(spaces) { space ->
                         SpaceCard(
                             space = space,
+                            isCreator = currentUser?.id == space.creatorId,
                             onClick = { onSpaceClick(space.id) },
                             onChangeCover = {
                                 selectedSpaceForCover = space
                                 coverPickerLauncher.launch("image/*")
+                            },
+                            onDelete = {
+                                viewModel.deleteSpace(space)
                             }
                         )
                     }
@@ -280,8 +284,15 @@ fun MemoriesScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SpaceCard(space: SharedSpace, onClick: () -> Unit, onChangeCover: () -> Unit = {}) {
+fun SpaceCard(
+    space: SharedSpace,
+    isCreator: Boolean = false,
+    onClick: () -> Unit,
+    onChangeCover: () -> Unit = {},
+    onDelete: () -> Unit = {}
+) {
     var showSpaceMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -412,8 +423,46 @@ fun SpaceCard(space: SharedSpace, onClick: () -> Unit, onChangeCover: () -> Unit
                         )
                     }
                 )
+                if (isCreator) {
+                    DropdownMenuItem(
+                        text = { Text("Supprimer l'espace", color = Color.Red) },
+                        onClick = {
+                            showSpaceMenu = false
+                            showDeleteConfirm = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = null,
+                                tint = Color.Red
+                            )
+                        }
+                    )
+                }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Supprimer l'espace", fontWeight = FontWeight.Bold) },
+            text = { Text("Êtes-vous sûr de vouloir supprimer \"${space.name}\" ? Cette action est irréversible et supprimera tous les médias associés.") },
+            shape = RoundedCornerShape(24.dp),
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    onDelete()
+                }) {
+                    Text("Supprimer", color = Color.Red, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 }
 
