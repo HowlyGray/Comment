@@ -45,6 +45,11 @@ class RealtimeSyncManager(
     private val messageListeners = mutableMapOf<String, ListenerRegistration>()
 
     /**
+     * Check if the sync manager has been initialized
+     */
+    fun isInitialized(): Boolean = currentUserId != null
+
+    /**
      * Initialize sync manager with user ID
      */
     fun initialize(userId: String) {
@@ -57,11 +62,11 @@ class RealtimeSyncManager(
      */
     private fun startConversationsSync() {
         val userId = currentUserId ?: return
+        Log.d(TAG, "Starting conversations sync for user: $userId")
 
         conversationsListener?.remove()
         conversationsListener = db.collection(CONVERSATIONS)
             .whereArrayContains("participantIds", userId)
-            .orderBy("lastMessageTime", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e(TAG, "Conversations sync error", error)
@@ -100,11 +105,10 @@ class RealtimeSyncManager(
         if (messageListeners.containsKey(conversationId)) {
             return // Already listening
         }
+        Log.d(TAG, "Starting messages sync for conversation: $conversationId")
 
-        val listener = db.collection(CONVERSATIONS)
-            .document(conversationId)
-            .collection(MESSAGES)
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+        val listener = db.collection(MESSAGES)
+            .whereEqualTo("conversationId", conversationId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e(TAG, "Messages sync error for $conversationId", error)
