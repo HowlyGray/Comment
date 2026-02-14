@@ -8,11 +8,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.memoryshare.app.MemoryShareApplication
 import com.memoryshare.app.ui.screens.*
 import com.memoryshare.app.ui.viewmodel.CallViewModel
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
@@ -36,10 +38,18 @@ fun AppNavigation(
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    val appContext = LocalContext.current.applicationContext
 
     // Toujours démarrer sur Login, puis naviguer automatiquement si un utilisateur est restauré
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
+            // Initialize RealtimeSyncManager for message notifications
+            // This must happen at the navigation level (not per-screen) because
+            // Firebase.auth.currentUser may be null on guest devices
+            currentUser?.id?.let { userId ->
+                (appContext as? MemoryShareApplication)?.ensureRealtimeSyncInitialized(userId)
+            }
+
             // Naviguer vers Messages si un utilisateur est restauré et qu'on est sur Login
             val currentRoute = navController.currentBackStackEntry?.destination?.route
             if (currentRoute == Screen.Login.route) {

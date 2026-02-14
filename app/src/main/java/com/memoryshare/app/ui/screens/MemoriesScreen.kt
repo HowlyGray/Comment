@@ -33,9 +33,7 @@ import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.BottomNavigationBar
 import com.memoryshare.app.ui.theme.*
 import com.memoryshare.app.utils.FirebaseStorageManager
-import com.memoryshare.app.MemoryShareApplication
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,12 +51,9 @@ fun MemoriesScreen(
     // Garantir que la synchronisation Firestore est active quand l'écran est affiché
     // Passe le userId explicitement car FirebaseAuth.currentUser peut être null
     // même si l'utilisateur est connecté au niveau de l'app (profil local)
-    val appContext = LocalContext.current.applicationContext
     LaunchedEffect(currentUser?.id) {
         currentUser?.id?.let { userId ->
             viewModel.ensureSyncing(userId)
-            // Initialiser le RealtimeSyncManager pour les notifications de messages
-            (appContext as? MemoryShareApplication)?.ensureRealtimeSyncInitialized(userId)
         }
     }
 
