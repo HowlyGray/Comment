@@ -140,6 +140,17 @@ class MemoryShareApplication : Application() {
     }
 
     /**
+     * Ensure realtime sync is initialized with the app-level user ID
+     * Called from Compose UI when currentUser is available, because
+     * Firebase.auth.currentUser may be null on guest devices
+     */
+    fun ensureRealtimeSyncInitialized(userId: String) {
+        if (realtimeSyncManager.isInitialized()) return
+        Log.d("MemoryShareApp", "Initializing RealtimeSyncManager with app-level userId: $userId")
+        realtimeSyncManager.initialize(userId)
+    }
+
+    /**
      * Cleanup on user logout
      */
     fun onUserLoggedOut() {
