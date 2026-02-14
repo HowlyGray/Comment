@@ -226,6 +226,12 @@ fun MemorySpaceScreen(
         }
     }
 
+    // Vérifier si l'utilisateur courant est admin ou créateur
+    val isCreatorOrAdmin = space?.let { s ->
+        currentUser?.id == s.creatorId ||
+                permissions.any { it.userId == currentUser?.id && it.permission == PermissionLevel.ADMIN }
+    } ?: false
+
     // Dialog de gestion des permissions
     if (showPermissionsDialog) {
         PermissionsDialog(
@@ -233,6 +239,7 @@ fun MemorySpaceScreen(
             permissions = permissions,
             allUsers = allUsers,
             currentUser = currentUser,
+            canManageMembers = isCreatorOrAdmin,
             onDismiss = { showPermissionsDialog = false },
             onAddMember = { showAddMemberDialog = true },
             onPermissionChange = { userId, permissionLevel ->
@@ -265,6 +272,7 @@ fun PermissionsDialog(
     permissions: List<com.memoryshare.app.data.model.SharedSpacePermission>,
     allUsers: List<User>,
     currentUser: User?,
+    canManageMembers: Boolean = false,
     onDismiss: () -> Unit,
     onAddMember: () -> Unit,
     onPermissionChange: (String, PermissionLevel) -> Unit,
@@ -291,17 +299,19 @@ fun PermissionsDialog(
                     .heightIn(max = 400.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {
-                    Button(
-                        onClick = onAddMember,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(12.dp)
-                    ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Inviter un contact")
+                if (canManageMembers) {
+                    item {
+                        Button(
+                            onClick = onAddMember,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(12.dp)
+                        ) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Inviter un contact")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
                 if (space != null) {
@@ -316,6 +326,7 @@ fun PermissionsDialog(
                             permissionLevel = permission?.permission ?: PermissionLevel.READ,
                             isOwner = isOwner,
                             isCurrentUser = isCurrentUser,
+                            canManageMembers = canManageMembers,
                             onPermissionChange = { newLevel ->
                                 onPermissionChange(userId, newLevel)
                             },
@@ -354,7 +365,7 @@ fun PermissionsDialog(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "• LECTURE : Peut voir les médias\n• ÉCRITURE : Peut ajouter et supprimer des médias",
+                                text = "• LECTURE : Peut voir les médias\n• ÉCRITURE : Peut ajouter et supprimer des médias\n• ADMIN : Peut gérer les membres et les permissions",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
@@ -449,6 +460,7 @@ fun MemberPermissionItem(
     permissionLevel: PermissionLevel,
     isOwner: Boolean,
     isCurrentUser: Boolean,
+    canManageMembers: Boolean = false,
     onPermissionChange: (PermissionLevel) -> Unit,
     onRemove: () -> Unit
 ) {
@@ -502,9 +514,9 @@ fun MemberPermissionItem(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Sélecteur de permission
-                if (!isOwner) {
+                if (!isOwner && canManageMembers) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilterChip(
@@ -515,7 +527,7 @@ fun MemberPermissionItem(
                                 Icon(
                                     Icons.Default.Visibility,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         )
@@ -527,10 +539,34 @@ fun MemberPermissionItem(
                                 Icon(
                                     Icons.Default.Edit,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         )
+                        FilterChip(
+                            selected = permissionLevel == PermissionLevel.ADMIN,
+                            onClick = { onPermissionChange(PermissionLevel.ADMIN) },
+                            label = { Text("ADMIN", style = MaterialTheme.typography.labelSmall) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.AdminPanelSettings,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        )
+                    }
+                } else if (!isOwner) {
+                    // Affichage lecture seule du niveau de permission
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val (icon, label) = when (permissionLevel) {
+                            PermissionLevel.READ -> Icons.Default.Visibility to "Lecture"
+                            PermissionLevel.WRITE -> Icons.Default.Edit to "Écriture"
+                            PermissionLevel.ADMIN -> Icons.Default.AdminPanelSettings to "Admin"
+                        }
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -550,8 +586,8 @@ fun MemberPermissionItem(
                 }
             }
 
-            // Bouton supprimer (pas pour le propriétaire ni pour soi-même)
-            if (!isOwner && !isCurrentUser) {
+            // Bouton supprimer (uniquement pour admin/créateur, pas pour le propriétaire ni soi-même)
+            if (!isOwner && !isCurrentUser && canManageMembers) {
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Default.PersonRemove,

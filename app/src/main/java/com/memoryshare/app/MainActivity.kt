@@ -75,12 +75,15 @@ class MainActivity : ComponentActivity() {
         )
         val postRepository = PostRepository(
             database.postDao(),
-            database.commentDao()
+            database.commentDao(),
+            database.userFollowDao(),
+            applicationContext
         )
         val spaceRepository = SharedSpaceRepository(
             database.sharedSpaceDao(),
             database.mediaDao(),
-            database.sharedSpacePermissionDao()
+            database.sharedSpacePermissionDao(),
+            applicationContext
         )
         val storyRepository = StoryRepository(
             database.storyDao()

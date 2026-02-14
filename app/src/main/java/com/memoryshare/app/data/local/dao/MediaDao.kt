@@ -30,4 +30,7 @@ interface MediaDao {
 
     @Query("DELETE FROM media WHERE spaceId = :spaceId")
     suspend fun deleteMediaBySpace(spaceId: String)
+
+    @Query("SELECT COUNT(*) FROM media WHERE spaceId = :spaceId")
+    suspend fun getMediaCountForSpace(spaceId: String): Int
 }

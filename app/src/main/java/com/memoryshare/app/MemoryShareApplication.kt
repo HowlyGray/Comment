@@ -14,6 +14,7 @@ import com.memoryshare.app.services.media.AudioRecorderManager
 import com.memoryshare.app.services.media.CameraManager
 import com.memoryshare.app.services.realtime.PresenceManager
 import com.memoryshare.app.services.realtime.RealtimeSyncManager
+import com.memoryshare.app.utils.NotificationHelper
 
 /**
  * Application class
@@ -78,6 +79,9 @@ class MemoryShareApplication : Application() {
         // Initialize services
         initializeServices()
 
+        // Initialize notification channels
+        NotificationHelper.initialize(this)
+
         Log.d(TAG, "MemoryShareApplication initialized")
     }
 
@@ -112,7 +116,8 @@ class MemoryShareApplication : Application() {
         presenceManager = PresenceManager()
         realtimeSyncManager = RealtimeSyncManager(
             messageDao = database.messageDao(),
-            conversationDao = database.conversationDao()
+            conversationDao = database.conversationDao(),
+            context = this
         )
 
         // Call services

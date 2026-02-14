@@ -12,6 +12,7 @@ import com.memoryshare.app.data.local.dao.MessageDao
 import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
+import com.memoryshare.app.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,7 +28,8 @@ import kotlinx.coroutines.tasks.await
  */
 class RealtimeSyncManager(
     private val messageDao: MessageDao,
-    private val conversationDao: ConversationDao
+    private val conversationDao: ConversationDao,
+    private val context: android.content.Context? = null
 ) {
     companion object {
         private const val TAG = "RealtimeSyncManager"
@@ -114,7 +116,27 @@ class RealtimeSyncManager(
                     for (change in changes) {
                         val message = change.document.toMessage()
                         when (change.type) {
-                            DocumentChange.Type.ADDED,
+                            DocumentChange.Type.ADDED -> {
+                                message?.let { msg ->
+                                    messageDao.insertMessage(msg)
+                                    // Notifier pour les nouveaux messages reçus (pas les nôtres)
+                                    if (msg.senderId != currentUserId && context != null) {
+                                        val preview = when (msg.type) {
+                                            MessageType.IMAGE -> "Photo"
+                                            MessageType.VIDEO -> "Vidéo"
+                                            MessageType.AUDIO -> "Audio"
+                                            MessageType.FILE -> "Fichier"
+                                            else -> msg.content
+                                        }
+                                        NotificationHelper.notifyNewMessage(
+                                            context = context,
+                                            senderName = msg.senderId,
+                                            messagePreview = preview,
+                                            conversationId = msg.conversationId
+                                        )
+                                    }
+                                }
+                            }
                             DocumentChange.Type.MODIFIED -> {
                                 message?.let { messageDao.insertMessage(it) }
                             }

@@ -6,7 +6,8 @@ import androidx.room.PrimaryKey
 
 enum class PermissionLevel {
     READ,   // Peut seulement voir
-    WRITE   // Peut voir et ajouter/supprimer
+    WRITE,  // Peut voir et ajouter/supprimer des médias
+    ADMIN   // Peut gérer les membres (ajouter/retirer) et modifier l'espace
 }
 
 @Entity(
