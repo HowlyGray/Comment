@@ -49,9 +49,11 @@ fun MemoriesScreen(
     onNavigateToSettings: () -> Unit
 ) {
     // Garantir que la synchronisation Firestore est active quand l'écran est affiché
+    // Passe le userId explicitement car FirebaseAuth.currentUser peut être null
+    // même si l'utilisateur est connecté au niveau de l'app (profil local)
     LaunchedEffect(currentUser?.id) {
-        if (currentUser != null) {
-            viewModel.ensureSyncing()
+        currentUser?.id?.let { userId ->
+            viewModel.ensureSyncing(userId)
         }
     }
 
