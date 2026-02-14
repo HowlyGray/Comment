@@ -88,24 +88,38 @@ class SharedSpaceViewModel(
 
     /**
      * Appelé depuis l'UI pour garantir que la synchronisation est active
-     * quand l'écran Souvenirs est affiché et l'utilisateur est connecté
+     * quand l'écran Souvenirs est affiché et l'utilisateur est connecté.
+     * Accepte un userId explicite pour les cas où FirebaseAuth.currentUser est null
+     * mais l'utilisateur est connecté au niveau de l'app (profil local).
      */
-    fun ensureSyncing() {
+    fun ensureSyncing(userId: String? = null) {
         if (spacesObserver == null) {
-            Log.d(TAG, "ensureSyncing: no active observer, attempting to start sync")
-            startSyncing()
+            val uid = userId ?: FirebaseManager.getCurrentUserId()
+            if (uid != null) {
+                Log.d(TAG, "ensureSyncing: no active observer, starting sync for user: $uid")
+                startSyncingForUser(uid)
+            } else {
+                Log.d(TAG, "ensureSyncing: no active observer and no userId available")
+            }
         }
     }
 
     /**
-     * Démarre la synchronisation en temps réel des dossiers pour l'utilisateur actuel
+     * Démarre la synchronisation via l'état d'authentification Firebase
      */
     private fun startSyncing() {
         FirebaseManager.getCurrentUserId()?.let { userId ->
-            spacesObserver?.remove()
-            spacesObserver = repository.startObservingUserSpaces(userId)
-            Log.d(TAG, "Started real-time sync for user: $userId")
+            startSyncingForUser(userId)
         }
+    }
+
+    /**
+     * Démarre la synchronisation en temps réel des dossiers pour un utilisateur donné
+     */
+    private fun startSyncingForUser(userId: String) {
+        spacesObserver?.remove()
+        spacesObserver = repository.startObservingUserSpaces(userId)
+        Log.d(TAG, "Started real-time sync for user: $userId")
     }
 
     fun loadSpace(spaceId: String) {
