@@ -8,6 +8,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
+import com.memoryshare.app.data.model.PrivacySettings
+import com.memoryshare.app.data.model.PrivacyVisibility
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,6 +43,7 @@ class PresenceManager : DefaultLifecycleObserver {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var currentUserId: String? = null
+    private var currentPrivacySettings: PrivacySettings = PrivacySettings()
     private var presenceListener: ListenerRegistration? = null
     private val typingListeners = mutableMapOf<String, ListenerRegistration>()
 
@@ -61,23 +64,44 @@ class PresenceManager : DefaultLifecycleObserver {
     }
 
     /**
-     * Set user as online
+     * Met à jour les paramètres de confidentialité locaux et les persiste dans Firestore
      */
-    fun goOnline() {
+    fun updatePrivacySettings(settings: PrivacySettings) {
+        currentPrivacySettings = settings
         val userId = currentUserId ?: return
-
         scope.launch {
             try {
                 db.collection(PRESENCE_COLLECTION).document(userId).set(
-                    mapOf(
-                        FIELD_IS_ONLINE to true,
-                        FIELD_LAST_SEEN to System.currentTimeMillis()
-                    ),
+                    mapOf("privacySettings" to settings.toMap()),
                     SetOptions.merge()
+                ).await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save privacy settings", e)
+            }
+        }
+    }
+
+    /**
+     * Set user as online — respecte le paramètre showOnlineStatus
+     */
+    fun goOnline() {
+        val userId = currentUserId ?: return
+        // Si l'utilisateur a choisi de masquer son statut en ligne, on n'envoie pas isOnline=true
+        val publishOnline = currentPrivacySettings.showOnlineStatus != PrivacyVisibility.NOBODY
+
+        scope.launch {
+            try {
+                val data = mutableMapOf<String, Any>(
+                    FIELD_LAST_SEEN to System.currentTimeMillis()
+                )
+                if (publishOnline) data[FIELD_IS_ONLINE] = true
+
+                db.collection(PRESENCE_COLLECTION).document(userId).set(
+                    data, SetOptions.merge()
                 ).await()
 
                 _isOnline.value = true
-                Log.d(TAG, "User $userId is now online")
+                Log.d(TAG, "User $userId is now online (publish=$publishOnline)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set online status", e)
             }
@@ -85,23 +109,25 @@ class PresenceManager : DefaultLifecycleObserver {
     }
 
     /**
-     * Set user as offline
+     * Set user as offline — respecte le paramètre showLastSeen
      */
     fun goOffline() {
         val userId = currentUserId ?: return
+        val publishLastSeen = currentPrivacySettings.showLastSeen != PrivacyVisibility.NOBODY
 
         scope.launch {
             try {
+                val data = mutableMapOf<String, Any>(
+                    FIELD_IS_ONLINE to false
+                )
+                if (publishLastSeen) data[FIELD_LAST_SEEN] = System.currentTimeMillis()
+
                 db.collection(PRESENCE_COLLECTION).document(userId).set(
-                    mapOf(
-                        FIELD_IS_ONLINE to false,
-                        FIELD_LAST_SEEN to System.currentTimeMillis()
-                    ),
-                    SetOptions.merge()
+                    data, SetOptions.merge()
                 ).await()
 
                 _isOnline.value = false
-                Log.d(TAG, "User $userId is now offline")
+                Log.d(TAG, "User $userId is now offline (publishLastSeen=$publishLastSeen)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set offline status", e)
             }
@@ -126,7 +152,7 @@ class PresenceManager : DefaultLifecycleObserver {
     }
 
     /**
-     * Observe user presence
+     * Observe user presence — applique les règles de confidentialité de la cible
      */
     fun observeUserPresence(userId: String): Flow<UserPresence> = callbackFlow {
         val listener = db.collection(PRESENCE_COLLECTION).document(userId)
@@ -137,10 +163,18 @@ class PresenceManager : DefaultLifecycleObserver {
                 }
 
                 val presence = if (snapshot?.exists() == true) {
+                    // Lire les paramètres de confidentialité de la cible
+                    @Suppress("UNCHECKED_CAST")
+                    val privacyMap = snapshot.get("privacySettings") as? Map<String, Any?> ?: emptyMap()
+                    val targetPrivacy = PrivacySettings.fromMap(privacyMap)
+
+                    val canSeeOnline = targetPrivacy.showOnlineStatus != PrivacyVisibility.NOBODY
+                    val canSeeLastSeen = targetPrivacy.showLastSeen != PrivacyVisibility.NOBODY
+
                     UserPresence(
                         userId = userId,
-                        isOnline = snapshot.getBoolean(FIELD_IS_ONLINE) ?: false,
-                        lastSeen = snapshot.getLong(FIELD_LAST_SEEN) ?: 0L
+                        isOnline = if (canSeeOnline) snapshot.getBoolean(FIELD_IS_ONLINE) ?: false else false,
+                        lastSeen = if (canSeeLastSeen) snapshot.getLong(FIELD_LAST_SEEN) ?: 0L else 0L
                     )
                 } else {
                     UserPresence(userId = userId, isOnline = false, lastSeen = 0L)
@@ -148,7 +182,6 @@ class PresenceManager : DefaultLifecycleObserver {
 
                 trySend(presence)
 
-                // Update observed users map
                 val current = _observedUsersPresence.value.toMutableMap()
                 current[userId] = presence
                 _observedUsersPresence.value = current
@@ -156,7 +189,6 @@ class PresenceManager : DefaultLifecycleObserver {
 
         awaitClose {
             listener.remove()
-            // Remove from observed users
             val current = _observedUsersPresence.value.toMutableMap()
             current.remove(userId)
             _observedUsersPresence.value = current

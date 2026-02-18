@@ -11,6 +11,14 @@ enum class MessageType {
     FILE
 }
 
+// États ACK WhatsApp-style : envoyé → délivré → lu
+enum class MessageStatus {
+    SENDING,   // En cours d'envoi (local uniquement)
+    SENT,      // ✓  Reçu par le serveur
+    DELIVERED, // ✓✓ Reçu sur l'appareil du destinataire
+    READ       // ✓✓ (bleu) Lu par le destinataire
+}
+
 @Entity(tableName = "messages")
 data class Message(
     @PrimaryKey
@@ -26,5 +34,9 @@ data class Message(
     val mediaThumbnailUrl: String? = null,
     val mediaDuration: Long? = null, // Pour audio/vidéo en millisecondes
     val replyToId: String? = null, // ID du message auquel on répond
-    val editedAt: Long? = null // Timestamp de la dernière édition
+    val editedAt: Long? = null, // Timestamp de la dernière édition
+    // Nouveau : ACK 3 états
+    val status: MessageStatus = MessageStatus.SENT,
+    // Nouveau : messages éphémères (null = pas d'expiration)
+    val expiresAt: Long? = null
 )

@@ -26,7 +26,7 @@ import com.memoryshare.app.data.model.*
         Call::class,
         MediaCache::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

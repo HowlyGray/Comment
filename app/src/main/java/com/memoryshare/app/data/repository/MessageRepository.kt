@@ -8,6 +8,7 @@ import com.memoryshare.app.data.local.dao.MessageReactionDao
 import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageReaction
+import com.memoryshare.app.data.model.MessageStatus
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.utils.FirebaseManager
 import kotlinx.coroutines.CoroutineScope
@@ -98,13 +99,20 @@ class MessageRepository(
         type: MessageType = MessageType.TEXT,
         mediaUrl: String? = null
     ): Message {
+        // Récupérer la durée éphémère de la conversation si configurée
+        val conversation = conversationDao.getConversationById(conversationId).firstOrNull()
+        val ephemeralDuration = conversation?.ephemeralDuration
+        val expiresAt = ephemeralDuration?.let { System.currentTimeMillis() + it }
+
         val message = Message(
             id = UUID.randomUUID().toString(),
             conversationId = conversationId,
             senderId = senderId,
             content = content,
             type = type,
-            mediaUrl = mediaUrl
+            mediaUrl = mediaUrl,
+            status = MessageStatus.SENDING,
+            expiresAt = expiresAt
         )
         // Sauvegarder localement
         messageDao.insertMessage(message)
@@ -375,6 +383,107 @@ class MessageRepository(
                     )
                 }
             }
+        }
+    }
+
+    // ==================== ACK : ÉTATS DES MESSAGES ====================
+
+    /**
+     * Marque un message comme SENT une fois confirmé par Firestore
+     */
+    suspend fun markMessageAsSent(messageId: String) {
+        messageDao.updateMessageStatus(messageId, MessageStatus.SENT)
+    }
+
+    /**
+     * Marque tous les messages reçus d'une conversation comme DELIVERED
+     * (appelé quand l'autre utilisateur ouvre l'app et reçoit les messages)
+     */
+    suspend fun markConversationMessagesDelivered(conversationId: String, currentUserId: String) {
+        messageDao.markMessagesAsDelivered(conversationId, currentUserId)
+    }
+
+    /**
+     * Marque tous les messages d'une conversation comme READ
+     * (appelé quand l'utilisateur ouvre la conversation)
+     */
+    suspend fun markConversationMessagesRead(conversationId: String, currentUserId: String) {
+        messageDao.markMessagesAsRead(conversationId, currentUserId)
+    }
+
+    // ==================== ADMIN GROUPES ====================
+
+    /**
+     * Promouvoir un membre comme admin du groupe
+     */
+    suspend fun promoteToAdmin(conversationId: String, userId: String) {
+        val conv = conversationDao.getConversationById(conversationId).firstOrNull() ?: return
+        val newAdmins = (conv.adminIds + userId).distinct()
+        conversationDao.updateConversation(conv.copy(adminIds = newAdmins))
+        scope.launch {
+            FirebaseManager.firestore
+                .collection(FirebaseManager.Collections.CONVERSATIONS)
+                .document(conversationId)
+                .update("adminIds", newAdmins)
+        }
+    }
+
+    /**
+     * Retirer les droits admin d'un membre
+     */
+    suspend fun demoteAdmin(conversationId: String, userId: String) {
+        val conv = conversationDao.getConversationById(conversationId).firstOrNull() ?: return
+        val newAdmins = conv.adminIds.filter { it != userId }
+        conversationDao.updateConversation(conv.copy(adminIds = newAdmins))
+        scope.launch {
+            FirebaseManager.firestore
+                .collection(FirebaseManager.Collections.CONVERSATIONS)
+                .document(conversationId)
+                .update("adminIds", newAdmins)
+        }
+    }
+
+    /**
+     * Générer et stocker un lien d'invitation pour un groupe
+     */
+    suspend fun generateInviteLink(conversationId: String): String {
+        val link = "memoryshare://join/$conversationId/${java.util.UUID.randomUUID()}"
+        conversationDao.updateInviteLink(conversationId, link)
+        scope.launch {
+            FirebaseManager.firestore
+                .collection(FirebaseManager.Collections.CONVERSATIONS)
+                .document(conversationId)
+                .update("inviteLink", link)
+        }
+        return link
+    }
+
+    /**
+     * Révoquer le lien d'invitation d'un groupe
+     */
+    suspend fun revokeInviteLink(conversationId: String) {
+        conversationDao.updateInviteLink(conversationId, null)
+        scope.launch {
+            FirebaseManager.firestore
+                .collection(FirebaseManager.Collections.CONVERSATIONS)
+                .document(conversationId)
+                .update("inviteLink", null)
+        }
+    }
+
+    // ==================== MESSAGES ÉPHÉMÈRES ====================
+
+    /**
+     * Définir la durée d'auto-destruction des messages dans une conversation
+     * durationMs = null pour désactiver | 86_400_000 = 24h | 604_800_000 = 7j | 7_776_000_000 = 90j
+     */
+    suspend fun setEphemeralDuration(conversationId: String, durationMs: Long?) {
+        conversationDao.updateEphemeralDuration(conversationId, durationMs)
+        scope.launch {
+            FirebaseManager.firestore
+                .collection(FirebaseManager.Collections.CONVERSATIONS)
+                .document(conversationId)
+                .update("ephemeralDuration", durationMs)
         }
     }
 

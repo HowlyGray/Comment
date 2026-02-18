@@ -50,4 +50,16 @@ interface ConversationDao {
 
     @Query("UPDATE conversations SET muted = :muted WHERE id IN (:conversationIds)")
     suspend fun updateMultipleMutedStatus(conversationIds: List<String>, muted: Boolean)
+
+    // Groupes : mettre à jour la liste des admins
+    @Query("UPDATE conversations SET adminIds = :adminIds WHERE id = :conversationId")
+    suspend fun updateAdminIds(conversationId: String, adminIds: String)
+
+    // Groupes : mettre à jour le lien d'invitation
+    @Query("UPDATE conversations SET inviteLink = :inviteLink WHERE id = :conversationId")
+    suspend fun updateInviteLink(conversationId: String, inviteLink: String?)
+
+    // Éphémères : mettre à jour la durée des messages éphémères
+    @Query("UPDATE conversations SET ephemeralDuration = :durationMs WHERE id = :conversationId")
+    suspend fun updateEphemeralDuration(conversationId: String, durationMs: Long?)
 }

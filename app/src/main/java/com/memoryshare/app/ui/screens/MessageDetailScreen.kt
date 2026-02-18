@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,8 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.memoryshare.app.data.model.Message
+import com.memoryshare.app.data.model.MessageStatus
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.ui.components.UserAvatar
@@ -70,6 +76,9 @@ fun MessageDetailScreen(
 
     var isSelectionMode by remember { mutableStateOf(false) }
     var selectedMessages by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showEphemeralMenu by remember { mutableStateOf(false) }
+    var showAdminMenu by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(selectedMessages) {
         if (selectedMessages.isEmpty() && isSelectionMode) {
@@ -81,6 +90,11 @@ fun MessageDetailScreen(
         viewModel.loadConversation(conversationId)
         viewModel.loadMessages(conversationId)
         viewModel.markAsRead(conversationId)
+        // ACK : marquer les messages comme lus (READ) et délivrés (DELIVERED)
+        currentUser?.let { user ->
+            viewModel.markMessagesRead(conversationId, user.id)
+            viewModel.markMessagesDelivered(conversationId, user.id)
+        }
     }
 
     LaunchedEffect(messages.size) {
@@ -245,6 +259,23 @@ fun MessageDetailScreen(
                                 onClick = { showOptionsMenu = false },
                                 leadingIcon = { Icon(Icons.Outlined.Palette, contentDescription = null) }
                             )
+                            // Messages éphémères
+                            DropdownMenuItem(
+                                text = { Text("Messages éphémères") },
+                                onClick = { showOptionsMenu = false; showEphemeralMenu = true },
+                                leadingIcon = { Icon(Icons.Outlined.Timer, contentDescription = null) }
+                            )
+                            // Gestion du groupe (admin seulement)
+                            if (conversation?.isGroup == true) {
+                                val isAdmin = conversation!!.adminIds.contains(currentUser?.id)
+                                if (isAdmin) {
+                                    DropdownMenuItem(
+                                        text = { Text("Gestion du groupe") },
+                                        onClick = { showOptionsMenu = false; showAdminMenu = true },
+                                        leadingIcon = { Icon(Icons.Outlined.AdminPanelSettings, contentDescription = null) }
+                                    )
+                                }
+                            }
                             HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text("Signaler") },
@@ -887,27 +918,12 @@ fun MessageBubble(
                             }
                             MessageType.AUDIO -> {
                                 if (message.mediaUrl != null) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable { onMediaClick() }
-                                            .padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Mic,
-                                            contentDescription = "Audio",
-                                            modifier = Modifier.size(24.dp),
-                                            tint = if (isFromCurrentUser) Color.White else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = message.content.ifBlank { "Message vocal" },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = if (isFromCurrentUser) Color.White else MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
+                                    // Streaming ExoPlayer — lecture avant fin du téléchargement
+                                    VoiceNotePlayer(
+                                        url = message.mediaUrl,
+                                        durationMs = message.mediaDuration,
+                                        isFromCurrentUser = isFromCurrentUser
+                                    )
                                 } else {
                                     Text(text = "[Audio]", style = MaterialTheme.typography.bodyMedium, color = if (isFromCurrentUser) Color.White else MaterialTheme.colorScheme.onSurface)
                                 }
@@ -942,6 +958,10 @@ fun MessageBubble(
                                     modifier = Modifier.size(14.dp),
                                     tint = StarYellow
                                 )
+                            }
+                            // ACK checkmarks (uniquement pour les messages envoyés par l'utilisateur courant)
+                            if (isFromCurrentUser) {
+                                MessageStatusIcon(status = message.status)
                             }
                         }
                     }
@@ -1050,6 +1070,315 @@ fun EmojiPicker(
 
         Spacer(modifier = Modifier.height(32.dp))
     }
+}
+
+// ==================== ACK : icône de statut du message ====================
+
+@Composable
+fun MessageStatusIcon(status: MessageStatus) {
+    val iconTint: Color
+    val iconVector: androidx.compose.ui.graphics.vector.ImageVector
+
+    when (status) {
+        MessageStatus.SENDING -> {
+            iconTint = Color.White.copy(alpha = 0.5f)
+            iconVector = Icons.Outlined.Schedule
+        }
+        MessageStatus.SENT -> {
+            iconTint = Color.White.copy(alpha = 0.7f)
+            iconVector = Icons.Default.Check
+        }
+        MessageStatus.DELIVERED -> {
+            iconTint = Color.White.copy(alpha = 0.7f)
+            iconVector = Icons.Default.DoneAll
+        }
+        MessageStatus.READ -> {
+            iconTint = Color(0xFF4FC3F7) // Bleu ciel — couleur WhatsApp "lu"
+            iconVector = Icons.Default.DoneAll
+        }
+    }
+
+    Icon(
+        imageVector = iconVector,
+        contentDescription = status.name,
+        modifier = Modifier.size(14.dp),
+        tint = iconTint
+    )
+}
+
+// ==================== Voice Note Player avec streaming ExoPlayer ====================
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+fun VoiceNotePlayer(
+    url: String,
+    durationMs: Long?,
+    isFromCurrentUser: Boolean
+) {
+    val context = LocalContext.current
+    var isPlaying by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf(0f) }
+    var currentPositionMs by remember { mutableStateOf(0L) }
+
+    val exoPlayer = remember(url) {
+        ExoPlayer.Builder(context).build().also { player ->
+            // Streaming progressif — lecture démarre avant fin du téléchargement
+            val mediaItem = MediaItem.fromUri(url)
+            player.setMediaItem(mediaItem)
+            player.prepare()
+        }
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.stop()
+            exoPlayer.release()
+        }
+    }
+
+    // Mettre à jour la progression toutes les 500ms pendant la lecture
+    LaunchedEffect(isPlaying) {
+        while (isPlaying) {
+            currentPositionMs = exoPlayer.currentPosition
+            val duration = exoPlayer.duration.takeIf { it > 0 } ?: (durationMs ?: 1L)
+            progress = (currentPositionMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+            if (!exoPlayer.isPlaying) {
+                isPlaying = false
+                progress = 0f
+                currentPositionMs = 0L
+            }
+            kotlinx.coroutines.delay(300)
+        }
+    }
+
+    val textColor = if (isFromCurrentUser) Color.White else MaterialTheme.colorScheme.onSurface
+    val iconTint = if (isFromCurrentUser) Color.White else CoralPrimary
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Bouton play/pause
+        IconButton(
+            onClick = {
+                if (isPlaying) {
+                    exoPlayer.pause()
+                    isPlaying = false
+                } else {
+                    exoPlayer.play()
+                    isPlaying = true
+                }
+            },
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Lecture",
+                tint = iconTint,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(6.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            // Barre de progression avec seek
+            Slider(
+                value = progress,
+                onValueChange = { newProgress ->
+                    progress = newProgress
+                    val duration = exoPlayer.duration.takeIf { it > 0 } ?: (durationMs ?: 1L)
+                    exoPlayer.seekTo((newProgress * duration).toLong())
+                },
+                modifier = Modifier.height(24.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = iconTint,
+                    activeTrackColor = iconTint,
+                    inactiveTrackColor = iconTint.copy(alpha = 0.3f)
+                )
+            )
+
+            // Durée
+            Text(
+                text = formatDuration(
+                    if (isPlaying) currentPositionMs else durationMs ?: 0L
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.7f)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+        Icon(
+            imageVector = Icons.Outlined.Mic,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = iconTint.copy(alpha = 0.6f)
+        )
+    }
+}
+
+private fun formatDuration(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
+}
+
+// ==================== Dialog : menu éphémère ====================
+
+@Composable
+fun EphemeralDurationDialog(
+    currentDurationMs: Long?,
+    onSelect: (Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        null to "Désactivé",
+        86_400_000L to "24 heures",
+        604_800_000L to "7 jours",
+        7_776_000_000L to "90 jours"
+    )
+    var selected by remember { mutableStateOf(currentDurationMs) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Messages éphémères", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(
+                    text = "Les nouveaux messages disparaîtront après le délai choisi.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                options.forEach { (durationMs, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { selected = durationMs }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selected == durationMs,
+                            onClick = { selected = durationMs },
+                            colors = RadioButtonDefaults.colors(selectedColor = CoralPrimary)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(label, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+        confirmButton = {
+            TextButton(onClick = { onSelect(selected) }) {
+                Text("Confirmer", color = CoralPrimary, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } }
+    )
+}
+
+// ==================== Dialog : gestion admin groupe ====================
+
+@Composable
+fun GroupAdminDialog(
+    conversation: com.memoryshare.app.data.model.Conversation,
+    allUsers: List<User>,
+    currentUserId: String?,
+    onPromote: (String) -> Unit,
+    onDemote: (String) -> Unit,
+    onGenerateLink: () -> Unit,
+    onRevokeLink: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Gestion du groupe", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Lien d'invitation
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Lien d'invitation", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                        if (conversation.inviteLink != null) {
+                            Text(
+                                text = conversation.inviteLink,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = onRevokeLink, modifier = Modifier.weight(1f)) {
+                                    Text("Révoquer", style = MaterialTheme.typography.labelSmall)
+                                }
+                                Button(
+                                    onClick = onGenerateLink,
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary)
+                                ) {
+                                    Text("Nouveau", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = onGenerateLink,
+                                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary)
+                            ) {
+                                Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Générer un lien")
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Membres et rôles
+                Text("Membres", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                conversation.participantIds.forEach { userId ->
+                    val user = allUsers.find { it.id == userId }
+                    val isAdmin = conversation.adminIds.contains(userId)
+                    val isSelf = userId == currentUserId
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        com.memoryshare.app.ui.components.UserAvatar(user = user, size = 28.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(user?.displayName ?: userId, style = MaterialTheme.typography.bodyMedium)
+                            if (isAdmin) {
+                                Text("Admin", style = MaterialTheme.typography.labelSmall, color = CoralPrimary)
+                            }
+                        }
+                        if (!isSelf) {
+                            if (isAdmin) {
+                                TextButton(onClick = { onDemote(userId) }) {
+                                    Text("Retirer admin", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                                }
+                            } else {
+                                TextButton(onClick = { onPromote(userId) }) {
+                                    Text("Admin", style = MaterialTheme.typography.labelSmall, color = CoralPrimary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Fermer") } }
+    )
 }
 
 private fun formatDetailTime(timestamp: Long): String {

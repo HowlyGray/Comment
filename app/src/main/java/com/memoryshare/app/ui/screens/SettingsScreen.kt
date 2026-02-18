@@ -28,6 +28,7 @@ import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 fun SettingsScreen(
     preferencesViewModel: PreferencesViewModel,
     onNavigateToProfile: () -> Unit,
+    onNavigateToPrivacy: () -> Unit = {},
     onLogout: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -123,7 +124,7 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Lock,
                         title = "Confidentialité",
                         subtitle = "Contrôlez qui peut voir vos contenus",
-                        onClick = {}
+                        onClick = onNavigateToPrivacy
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
 

@@ -229,6 +229,40 @@ class MessageViewModel(
         }
     }
 
+    // ACK : marquer les messages comme lus (READ) et délivrés (DELIVERED)
+    fun markMessagesRead(conversationId: String, currentUserId: String) {
+        viewModelScope.launch {
+            repository.markConversationMessagesRead(conversationId, currentUserId)
+        }
+    }
+
+    fun markMessagesDelivered(conversationId: String, currentUserId: String) {
+        viewModelScope.launch {
+            repository.markConversationMessagesDelivered(conversationId, currentUserId)
+        }
+    }
+
+    // Admin groupes
+    fun promoteToAdmin(conversationId: String, userId: String) {
+        viewModelScope.launch { repository.promoteToAdmin(conversationId, userId) }
+    }
+
+    fun demoteAdmin(conversationId: String, userId: String) {
+        viewModelScope.launch { repository.demoteAdmin(conversationId, userId) }
+    }
+
+    suspend fun generateInviteLink(conversationId: String): String =
+        repository.generateInviteLink(conversationId)
+
+    fun revokeInviteLink(conversationId: String) {
+        viewModelScope.launch { repository.revokeInviteLink(conversationId) }
+    }
+
+    // Messages éphémères
+    fun setEphemeralDuration(conversationId: String, durationMs: Long?) {
+        viewModelScope.launch { repository.setEphemeralDuration(conversationId, durationMs) }
+    }
+
     fun deleteConversation(conversation: Conversation) {
         viewModelScope.launch {
             repository.deleteConversation(conversation)
