@@ -490,15 +490,22 @@ class MessageRepository(
 
     /**
      * Synchronise les conversations depuis Firebase vers la base de données locale
+     * Filtre uniquement les conversations auxquelles l'utilisateur courant participe
      */
     suspend fun syncConversationsFromFirebase() {
         try {
+            val currentUserId = FirebaseManager.getCurrentUserId()
+            if (currentUserId == null) {
+                Log.w(TAG, "Cannot sync conversations: no current user")
+                return
+            }
             val querySnapshot = firestore.collection(FirebaseManager.Collections.CONVERSATIONS)
+                .whereArrayContains("participantIds", currentUserId)
                 .get()
                 .await()
             val conversations = querySnapshot.documents.mapNotNull { it.toConversation() }
             conversations.forEach { conversationDao.insertConversation(it) }
-            Log.d(TAG, "Synced ${conversations.size} conversations from Firebase")
+            Log.d(TAG, "Synced ${conversations.size} conversations from Firebase for user $currentUserId")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to sync conversations from Firebase", e)
         }
