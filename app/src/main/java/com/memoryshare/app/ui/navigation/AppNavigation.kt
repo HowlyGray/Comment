@@ -463,12 +463,28 @@ fun AppNavigation(
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
                 },
+                onNavigateToPrivacy = {
+                    navController.navigate(Screen.PrivacySettings.route)
+                },
                 onLogout = {
                     userViewModel.setCurrentUser(null)
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.PrivacySettings.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) }
+        ) {
+            PrivacySettingsScreen(
+                preferencesViewModel = preferencesViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

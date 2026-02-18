@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 /**
  * Firestore Manager
@@ -370,6 +371,170 @@ class FirestoreManager {
         }
     }
 
+    // ==================== MESSAGE ACK OPERATIONS ====================
+
+    suspend fun updateMessageStatus(
+        conversationId: String,
+        messageId: String,
+        status: MessageStatus
+    ): Result<Unit> {
+        return try {
+            db.collection(CONVERSATIONS)
+                .document(conversationId)
+                .collection(MESSAGES)
+                .document(messageId)
+                .update("status", status.name)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Marque tous les messages non-lus d'un expéditeur comme DELIVERED dans une conversation
+    suspend fun markConversationMessagesDelivered(
+        conversationId: String,
+        currentUserId: String
+    ): Result<Unit> {
+        return try {
+            val batch = db.batch()
+            val messages = db.collection(CONVERSATIONS)
+                .document(conversationId)
+                .collection(MESSAGES)
+                .whereNotEqualTo("senderId", currentUserId)
+                .whereEqualTo("status", MessageStatus.SENT.name)
+                .get()
+                .await()
+            messages.documents.forEach { doc ->
+                batch.update(doc.reference, "status", MessageStatus.DELIVERED.name)
+            }
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Marque tous les messages comme READ lors de l'ouverture de la conversation
+    suspend fun markConversationMessagesRead(
+        conversationId: String,
+        currentUserId: String
+    ): Result<Unit> {
+        return try {
+            val batch = db.batch()
+            val messages = db.collection(CONVERSATIONS)
+                .document(conversationId)
+                .collection(MESSAGES)
+                .whereNotEqualTo("senderId", currentUserId)
+                .get()
+                .await()
+            messages.documents
+                .filter { it.getString("status") != MessageStatus.READ.name }
+                .forEach { doc ->
+                    batch.update(doc.reference, "status", MessageStatus.READ.name)
+                }
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== GROUP ADMIN OPERATIONS ====================
+
+    suspend fun promoteToAdmin(conversationId: String, userId: String): Result<Unit> {
+        return try {
+            db.collection(CONVERSATIONS).document(conversationId).update(
+                "adminIds", FieldValue.arrayUnion(userId)
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun demoteAdmin(conversationId: String, userId: String): Result<Unit> {
+        return try {
+            db.collection(CONVERSATIONS).document(conversationId).update(
+                "adminIds", FieldValue.arrayRemove(userId)
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun generateInviteLink(conversationId: String): Result<String> {
+        return try {
+            val link = "memoryshare://join/$conversationId/${UUID.randomUUID()}"
+            db.collection(CONVERSATIONS).document(conversationId).update(
+                "inviteLink", link
+            ).await()
+            Result.success(link)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== EPHEMERAL MESSAGES OPERATIONS ====================
+
+    suspend fun setEphemeralDuration(
+        conversationId: String,
+        durationMs: Long?
+    ): Result<Unit> {
+        return try {
+            db.collection(CONVERSATIONS).document(conversationId).update(
+                "ephemeralDuration", durationMs
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteExpiredMessages(conversationId: String): Result<Int> {
+        return try {
+            val now = System.currentTimeMillis()
+            val expired = db.collection(CONVERSATIONS)
+                .document(conversationId)
+                .collection(MESSAGES)
+                .whereLessThan("expiresAt", now)
+                .get()
+                .await()
+            val batch = db.batch()
+            expired.documents.forEach { batch.delete(it.reference) }
+            batch.commit().await()
+            Result.success(expired.size())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== PRIVACY SETTINGS OPERATIONS ====================
+
+    suspend fun savePrivacySettings(userId: String, settings: PrivacySettings): Result<Unit> {
+        return try {
+            db.collection(PRESENCE).document(userId).set(
+                mapOf("privacySettings" to settings.toMap()),
+                SetOptions.merge()
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPrivacySettings(userId: String): Result<PrivacySettings> {
+        return try {
+            val doc = db.collection(PRESENCE).document(userId).get().await()
+            @Suppress("UNCHECKED_CAST")
+            val map = doc.get("privacySettings") as? Map<String, Any?> ?: emptyMap()
+            Result.success(PrivacySettings.fromMap(map))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ==================== PRESENCE OPERATIONS ====================
 
     suspend fun updatePresence(userId: String, isOnline: Boolean): Result<Unit> {
@@ -504,7 +669,10 @@ class FirestoreManager {
         "archived" to archived,
         "pinned" to pinned,
         "pinnedAt" to pinnedAt,
-        "muted" to muted
+        "muted" to muted,
+        "adminIds" to adminIds,
+        "inviteLink" to inviteLink,
+        "ephemeralDuration" to ephemeralDuration
     )
 
     @Suppress("UNCHECKED_CAST")
@@ -522,7 +690,10 @@ class FirestoreManager {
                 archived = getBoolean("archived") ?: false,
                 pinned = getBoolean("pinned") ?: false,
                 pinnedAt = getLong("pinnedAt"),
-                muted = getBoolean("muted") ?: false
+                muted = getBoolean("muted") ?: false,
+                adminIds = get("adminIds") as? List<String> ?: emptyList(),
+                inviteLink = getString("inviteLink"),
+                ephemeralDuration = getLong("ephemeralDuration")
             )
         } catch (e: Exception) {
             null
@@ -542,7 +713,9 @@ class FirestoreManager {
         "mediaThumbnailUrl" to mediaThumbnailUrl,
         "mediaDuration" to mediaDuration,
         "replyToId" to replyToId,
-        "editedAt" to editedAt
+        "editedAt" to editedAt,
+        "status" to status.name,
+        "expiresAt" to expiresAt
     )
 
     private fun DocumentSnapshot.toMessage(): Message? {
@@ -560,7 +733,9 @@ class FirestoreManager {
                 mediaThumbnailUrl = getString("mediaThumbnailUrl"),
                 mediaDuration = getLong("mediaDuration"),
                 replyToId = getString("replyToId"),
-                editedAt = getLong("editedAt")
+                editedAt = getLong("editedAt"),
+                status = try { MessageStatus.valueOf(getString("status") ?: "SENT") } catch (_: Exception) { MessageStatus.SENT },
+                expiresAt = getLong("expiresAt")
             )
         } catch (e: Exception) {
             null

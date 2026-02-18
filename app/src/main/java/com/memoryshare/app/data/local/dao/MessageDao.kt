@@ -2,6 +2,7 @@ package com.memoryshare.app.data.local.dao
 
 import androidx.room.*
 import com.memoryshare.app.data.model.Message
+import com.memoryshare.app.data.model.MessageStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -58,4 +59,24 @@ interface MessageDao {
         ) AND isRead = 0
     """)
     fun getUnreadArchivedMessagesCount(): Flow<Int>
+
+    // ACK : mise à jour du statut d'un message
+    @Query("UPDATE messages SET status = :status WHERE id = :messageId")
+    suspend fun updateMessageStatus(messageId: String, status: MessageStatus)
+
+    // ACK : marquer tous les messages d'un expéditeur comme DELIVERED dans une conversation
+    @Query("UPDATE messages SET status = :status WHERE conversationId = :conversationId AND senderId != :currentUserId AND status = 'SENT'")
+    suspend fun markMessagesAsDelivered(conversationId: String, currentUserId: String, status: MessageStatus = MessageStatus.DELIVERED)
+
+    // ACK : marquer tous les messages d'une conversation comme READ
+    @Query("UPDATE messages SET status = :status WHERE conversationId = :conversationId AND senderId != :currentUserId AND status != 'READ'")
+    suspend fun markMessagesAsRead(conversationId: String, currentUserId: String, status: MessageStatus = MessageStatus.READ)
+
+    // Éphémères : supprimer les messages expirés
+    @Query("DELETE FROM messages WHERE expiresAt IS NOT NULL AND expiresAt < :now")
+    suspend fun deleteExpiredMessages(now: Long = System.currentTimeMillis())
+
+    // Éphémères : récupérer les IDs des messages expirés (pour synchro Firebase)
+    @Query("SELECT id FROM messages WHERE expiresAt IS NOT NULL AND expiresAt < :now")
+    suspend fun getExpiredMessageIds(now: Long = System.currentTimeMillis()): List<String>
 }

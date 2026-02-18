@@ -52,4 +52,5 @@ sealed class Screen(val route: String) {
     object Camera : Screen("camera")
     object CallHistory : Screen("call_history")
     object ForwardMessages : Screen("forward_messages")
+    object PrivacySettings : Screen("privacy_settings")
 }

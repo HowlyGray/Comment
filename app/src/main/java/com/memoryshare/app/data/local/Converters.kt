@@ -2,6 +2,7 @@ package com.memoryshare.app.data.local
 
 import androidx.room.TypeConverter
 import com.memoryshare.app.data.model.MediaType
+import com.memoryshare.app.data.model.MessageStatus
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.PermissionLevel
@@ -26,6 +27,16 @@ class Converters {
     @TypeConverter
     fun toMessageType(value: String): MessageType {
         return MessageType.valueOf(value)
+    }
+
+    @TypeConverter
+    fun fromMessageStatus(value: MessageStatus): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun toMessageStatus(value: String): MessageStatus {
+        return try { MessageStatus.valueOf(value) } catch (_: Exception) { MessageStatus.SENT }
     }
 
     @TypeConverter
