@@ -2,6 +2,7 @@ package com.memoryshare.app.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.firebase.firestore.PropertyName
 
 enum class MessageType {
     TEXT,
@@ -28,7 +29,9 @@ data class Message(
     val content: String = "", // Texte ou URL du média
     val type: MessageType = MessageType.TEXT,
     val timestamp: Long = System.currentTimeMillis(),
+    @get:PropertyName("isRead")
     val isRead: Boolean = false,
+    @get:PropertyName("isStarred")
     val isStarred: Boolean = false, // Message marqué comme important
     val mediaUrl: String? = null,
     val mediaThumbnailUrl: String? = null,
