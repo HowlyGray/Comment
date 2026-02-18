@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.memoryshare.app.data.model.Post
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.User
@@ -504,7 +506,10 @@ fun PostItem(
                     )
                 } else {
                     AsyncImage(
-                        model = post.mediaUrls.first(),
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(post.mediaUrls.first())
+                            .crossfade(true)
+                            .build(),
                         contentDescription = post.caption,
                         modifier = Modifier
                             .fillMaxWidth()

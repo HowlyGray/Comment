@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.layout.ContentScale
@@ -56,7 +59,9 @@ fun MessageDetailScreen(
     onNavigateToVideoCall: (String) -> Unit = {},
     onNavigateToVoiceCall: (String) -> Unit = {},
     onNavigateToForward: () -> Unit,
-    onNavigateToMediaViewer: (String) -> Unit = {}
+    onNavigateToMediaViewer: (String) -> Unit = {},
+    onNavigateToConversationMedia: (String) -> Unit = {},
+    onNavigateToCamera: () -> Unit = {}
 ) {
     val messages by viewModel.currentMessages.collectAsState()
     val conversation by viewModel.currentConversation.collectAsState()
@@ -79,6 +84,25 @@ fun MessageDetailScreen(
     var showEphemeralMenu by remember { mutableStateOf(false) }
     var showAdminMenu by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
+    val context = LocalContext.current
+    // Gallery media picker for sending images/videos in conversations
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { selectedUri ->
+            val mimeType = context.contentResolver?.getType(selectedUri)
+            val messageType = if (mimeType?.startsWith("video") == true) MessageType.VIDEO else MessageType.IMAGE
+            currentUser?.let { user ->
+                viewModel.sendMessageWithMedia(
+                    conversationId = conversationId,
+                    senderId = user.id,
+                    mediaUri = selectedUri,
+                    mediaType = messageType
+                )
+            }
+        }
+    }
 
     LaunchedEffect(selectedMessages) {
         if (selectedMessages.isEmpty() && isSelectionMode) {
@@ -251,7 +275,7 @@ fun MessageDetailScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Médias, liens et documents") },
-                                onClick = { showOptionsMenu = false },
+                                onClick = { showOptionsMenu = false; onNavigateToConversationMedia(conversationId) },
                                 leadingIcon = { Icon(Icons.Outlined.Collections, contentDescription = null) }
                             )
                             DropdownMenuItem(
@@ -386,8 +410,14 @@ fun MessageDetailScreen(
                     if (showAttachmentMenu) {
                         AttachmentOptionsGrid(
                             onDismiss = { showAttachmentMenu = false },
-                            onGallery = { showAttachmentMenu = false },
-                            onCamera = { showAttachmentMenu = false },
+                            onGallery = {
+                                showAttachmentMenu = false
+                                galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                            },
+                            onCamera = {
+                                showAttachmentMenu = false
+                                onNavigateToCamera()
+                            },
                             onAudio = { showAttachmentMenu = false },
                             onDocument = { showAttachmentMenu = false },
                             onContact = { showAttachmentMenu = false },

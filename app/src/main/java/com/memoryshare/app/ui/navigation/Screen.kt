@@ -1,6 +1,7 @@
 package com.memoryshare.app.ui.navigation
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Login : Screen("login")
     object Messages : Screen("messages")
     object SelectContact : Screen("select_contact")

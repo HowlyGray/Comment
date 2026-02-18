@@ -3,11 +3,16 @@ package com.memoryshare.app.ui.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -40,33 +45,40 @@ fun AppNavigation(
     callViewModel: CallViewModel
 ) {
     val currentUser by userViewModel.currentUser.collectAsState()
+    val isAuthChecked by userViewModel.isAuthChecked.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val appContext = LocalContext.current.applicationContext
 
-    // Toujours démarrer sur Login, puis naviguer automatiquement si un utilisateur est restauré
+    // Initialize RealtimeSyncManager whenever the user changes
     LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            // Initialize RealtimeSyncManager for message notifications
-            // This must happen at the navigation level (not per-screen) because
-            // Firebase.auth.currentUser may be null on guest devices
-            currentUser?.id?.let { userId ->
-                (appContext as? MemoryShareApplication)?.ensureRealtimeSyncInitialized(userId)
-            }
-
-            // Naviguer vers Messages si un utilisateur est restauré et qu'on est sur Login
-            val currentRoute = navController.currentBackStackEntry?.destination?.route
-            if (currentRoute == Screen.Login.route) {
-                navController.navigate(Screen.Messages.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
-            }
+        currentUser?.id?.let { userId ->
+            (appContext as? MemoryShareApplication)?.ensureRealtimeSyncInitialized(userId)
         }
     }
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = Screen.Splash.route
     ) {
+        composable(Screen.Splash.route) {
+            // Wait for the auth check to complete, then navigate without showing Login flash
+            LaunchedEffect(isAuthChecked) {
+                if (isAuthChecked) {
+                    if (currentUser != null) {
+                        navController.navigate(Screen.Messages.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                }
+            }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = { user ->
@@ -220,6 +232,12 @@ fun AppNavigation(
                 onNavigateToForward = { navController.navigate(Screen.ForwardMessages.route) },
                 onNavigateToMediaViewer = { messageId ->
                     navController.navigate(Screen.MessageMediaViewer.createRoute(messageId))
+                },
+                onNavigateToConversationMedia = { convId ->
+                    navController.navigate(Screen.ConversationMedia.createRoute(convId))
+                },
+                onNavigateToCamera = {
+                    navController.navigate(Screen.Camera.route)
                 }
             )
         }
