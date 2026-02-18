@@ -13,6 +13,7 @@ import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.repository.PostRepository
 import com.memoryshare.app.utils.FirebaseStorageManager
 import com.memoryshare.app.utils.MediaSyncManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,42 +47,44 @@ class PostViewModel(
 
     private val storageManager = FirebaseStorageManager()
 
+    private var postsCollectionJob: Job? = null
+    private var followingPostsCollectionJob: Job? = null
+
     companion object {
         private const val TAG = "PostViewModel"
     }
 
     init {
-        syncAndLoadPosts()
-    }
-
-    /**
-     * Synchronise les posts publics depuis Firebase puis charge le feed local
-     */
-    private fun syncAndLoadPosts() {
+        // Only sync from Firebase on init; don't start collecting yet.
+        // Collection will start when loadFeedPosts/loadFollowingPosts is called from the UI.
         viewModelScope.launch {
-            // D'abord synchroniser les posts publics depuis Firebase
             try {
                 repository.syncPostsFromFirebase()
                 Log.d(TAG, "Firebase posts synced successfully")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to sync posts from Firebase", e)
             }
-            // Puis observer les posts locaux (incluant ceux synchronisés)
-            repository.getPublicPosts().collect { posts ->
-                _posts.value = posts
-            }
         }
     }
 
     /**
-     * Rafraîchit les posts depuis Firebase
+     * Rafraichit les posts depuis Firebase
      */
     fun refreshPosts() {
-        syncAndLoadPosts()
+        viewModelScope.launch {
+            try {
+                repository.syncPostsFromFirebase()
+                Log.d(TAG, "Firebase posts refreshed successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to refresh posts from Firebase", e)
+            }
+        }
     }
 
     fun loadFeedPosts(currentUserId: String) {
-        viewModelScope.launch {
+        // Cancel any previous posts collection to avoid race conditions
+        postsCollectionJob?.cancel()
+        postsCollectionJob = viewModelScope.launch {
             // Synchroniser d'abord
             try {
                 repository.syncPostsFromFirebase()
@@ -95,7 +98,9 @@ class PostViewModel(
     }
 
     fun loadFollowingPosts(userId: String) {
-        viewModelScope.launch {
+        // Cancel any previous following posts collection to avoid race conditions
+        followingPostsCollectionJob?.cancel()
+        followingPostsCollectionJob = viewModelScope.launch {
             // Synchroniser d'abord
             try {
                 repository.syncPostsFromFirebase()
@@ -140,7 +145,7 @@ class PostViewModel(
     }
 
     /**
-     * Upload un média vers Firebase Storage
+     * Upload un media vers Firebase Storage
      */
     suspend fun uploadMedia(uri: Uri, mediaType: PostMediaType): Result<String> {
         return try {
@@ -172,9 +177,9 @@ class PostViewModel(
     }
 
     /**
-     * Crée un post avec upload automatique du média si c'est un URI local
-     * @param quality Qualité du média (HD ou SD) pour la compression
-     * @param onSuccess Callback appelé avec l'URL finale du média uploadé
+     * Cree un post avec upload automatique du media si c'est un URI local
+     * @param quality Qualite du media (HD ou SD) pour la compression
+     * @param onSuccess Callback appele avec l'URL finale du media uploade
      */
     fun createPostWithMedia(
         authorId: String,
@@ -190,7 +195,7 @@ class PostViewModel(
     ) {
         viewModelScope.launch {
             try {
-                // Vérifier si c'est un URI local ou une URL web
+                // Verifier si c'est un URI local ou une URL web
                 val finalUrl = if (mediaUri != null && mediaUrl.startsWith("content://")) {
                     // Utiliser MediaSyncManager si disponible pour compression et cache local
                     if (mediaSyncManager != null) {
@@ -205,7 +210,7 @@ class PostViewModel(
                             PostMediaType.AUDIO -> MediaType.AUDIO
                         }
 
-                        // Préparer le média (compression + stockage local)
+                        // Preparer le media (compression + stockage local)
                         val prepareResult = mediaSyncManager.prepareMediaForUpload(
                             uri = mediaUri,
                             type = cacheMediaType,
@@ -216,7 +221,7 @@ class PostViewModel(
                         )
 
                         if (prepareResult.isFailure) {
-                            val error = prepareResult.exceptionOrNull()?.message ?: "Erreur de préparation du média"
+                            val error = prepareResult.exceptionOrNull()?.message ?: "Erreur de preparation du media"
                             _uploadError.value = error
                             onError(error)
                             return@launch
@@ -241,7 +246,7 @@ class PostViewModel(
                         _uploadProgress.value = null
                         firebaseUrl
                     } else {
-                        // Fallback: utiliser l'ancien système sans cache
+                        // Fallback: utiliser l'ancien systeme sans cache
                         Log.d(TAG, "MediaSyncManager not available, using legacy upload...")
                         val uploadResult = uploadMedia(mediaUri, mediaType)
                         uploadResult.getOrElse {
@@ -250,18 +255,18 @@ class PostViewModel(
                         }
                     }
                 } else {
-                    // C'est déjà une URL web, on l'utilise directement
+                    // C'est deja une URL web, on l'utilise directement
                     mediaUrl
                 }
 
-                // Créer le post avec l'URL Firebase ou l'URL web
+                // Creer le post avec l'URL Firebase ou l'URL web
                 Log.d(TAG, "Creating post with URL: $finalUrl")
                 repository.createPost(authorId, listOf(finalUrl), mediaType, caption, thumbnailUrl, visibility)
                 onSuccess(finalUrl)
             } catch (e: Exception) {
                 Log.e(TAG, "Error creating post", e)
                 _uploadError.value = e.message
-                onError(e.message ?: "Erreur de création du post")
+                onError(e.message ?: "Erreur de creation du post")
             }
         }
     }

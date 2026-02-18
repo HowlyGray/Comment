@@ -489,6 +489,11 @@ fun AppNavigation(
                 },
                 onLogout = {
                     coroutineScope.launch {
+                        // Sign out from Firebase Auth and clean up realtime services
+                        val app = appContext as? MemoryShareApplication
+                        app?.firebaseAuthManager?.signOut()
+                        app?.onUserLoggedOut()
+                        // Clear all local data so the next user starts clean
                         withContext(Dispatchers.IO) {
                             AppDatabase.getDatabase(appContext).clearAllTables()
                         }

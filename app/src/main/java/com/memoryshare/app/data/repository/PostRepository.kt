@@ -238,10 +238,9 @@ class PostRepository(
      */
     suspend fun syncPostsFromFirebase() {
         try {
-            // Requête simple sans orderBy pour éviter l'index composite Firestore
-            // Le tri se fait côté local via Room (ORDER BY timestamp DESC)
+            // Fetch all posts from Firestore (visibility filtering is handled locally by Room queries).
+            // This avoids missing posts due to potential enum serialization mismatches in Firestore.
             val querySnapshot = firestore.collection(FirebaseManager.Collections.POSTS)
-                .whereEqualTo("visibility", "PUBLIC")
                 .limit(100)
                 .get()
                 .await()
@@ -254,7 +253,12 @@ class PostRepository(
                         authorId = doc.getString("authorId") ?: "",
                         caption = doc.getString("caption"),
                         mediaUrls = doc.get("mediaUrls") as? List<String> ?: emptyList(),
-                        mediaType = PostMediaType.valueOf(doc.getString("mediaType") ?: "IMAGE"),
+                        mediaType = try {
+                            PostMediaType.valueOf(doc.getString("mediaType") ?: "IMAGE")
+                        } catch (e: Exception) {
+                            PostMediaType.IMAGE
+                        },
+                        thumbnailUrl = doc.getString("thumbnailUrl"),
                         timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
                         likeCount = doc.getLong("likeCount")?.toInt() ?: 0,
                         commentCount = doc.getLong("commentCount")?.toInt() ?: 0,

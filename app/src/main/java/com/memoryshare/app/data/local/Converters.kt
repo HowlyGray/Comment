@@ -7,16 +7,26 @@ import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.data.model.PostMediaType
 import com.memoryshare.app.data.model.PermissionLevel
 import com.memoryshare.app.data.model.StoryMediaType
+import org.json.JSONArray
 
 class Converters {
     @TypeConverter
     fun fromStringList(value: List<String>?): String? {
-        return value?.joinToString(",")
+        if (value == null) return null
+        return JSONArray(value).toString()
     }
 
     @TypeConverter
     fun toStringList(value: String?): List<String> {
-        return value?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+        if (value.isNullOrEmpty()) return emptyList()
+        // Handle legacy comma-separated format for backward compatibility
+        return try {
+            val jsonArray = JSONArray(value)
+            (0 until jsonArray.length()).map { jsonArray.getString(it) }
+        } catch (e: Exception) {
+            // Fallback for old comma-separated data
+            value.split(",").filter { it.isNotEmpty() }
+        }
     }
 
     @TypeConverter

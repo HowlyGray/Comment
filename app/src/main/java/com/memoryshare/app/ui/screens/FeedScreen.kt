@@ -505,18 +505,22 @@ fun PostItem(
                         onVideoClick = { onMediaClick() }
                     )
                 } else {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(post.mediaUrls.first())
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = post.caption,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(320.dp)
-                            .clickable { onMediaClick() },
-                        contentScale = ContentScale.Crop
-                    )
+                            .clickable { onMediaClick() }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(post.mediaUrls.first())
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = post.caption,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
 
