@@ -15,8 +15,8 @@ class Converters {
     }
 
     @TypeConverter
-    fun toStringList(value: String?): List<String>? {
-        return value?.split(",")?.filter { it.isNotEmpty() }
+    fun toStringList(value: String?): List<String> {
+        return value?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
     }
 
     @TypeConverter

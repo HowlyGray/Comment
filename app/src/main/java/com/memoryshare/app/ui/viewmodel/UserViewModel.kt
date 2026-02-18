@@ -40,6 +40,9 @@ class UserViewModel(
     private val _followingUserIds = MutableStateFlow<Set<String>>(emptySet())
     val followingUserIds: StateFlow<Set<String>> = _followingUserIds.asStateFlow()
 
+    private val _isAuthChecked = MutableStateFlow(false)
+    val isAuthChecked: StateFlow<Boolean> = _isAuthChecked.asStateFlow()
+
     companion object {
         private const val TAG = "UserViewModel"
     }
@@ -57,6 +60,7 @@ class UserViewModel(
                 _currentUser.value = user
                 loadFollowingUserIds(savedUserId)
             }
+            _isAuthChecked.value = true
         }
     }
 
