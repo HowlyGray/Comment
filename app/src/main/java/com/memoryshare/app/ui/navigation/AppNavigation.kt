@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.memoryshare.app.MemoryShareApplication
+import com.memoryshare.app.data.local.AppDatabase
 import com.memoryshare.app.ui.screens.*
 import com.memoryshare.app.ui.viewmodel.CallViewModel
 import com.memoryshare.app.ui.viewmodel.MessageViewModel
@@ -23,7 +24,9 @@ import com.memoryshare.app.ui.viewmodel.PreferencesViewModel
 import com.memoryshare.app.ui.viewmodel.SharedSpaceViewModel
 import com.memoryshare.app.ui.viewmodel.StoryViewModel
 import com.memoryshare.app.ui.viewmodel.UserViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AppNavigation(
@@ -467,9 +470,14 @@ fun AppNavigation(
                     navController.navigate(Screen.PrivacySettings.route)
                 },
                 onLogout = {
-                    userViewModel.setCurrentUser(null)
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
+                    coroutineScope.launch {
+                        withContext(Dispatchers.IO) {
+                            AppDatabase.getDatabase(appContext).clearAllTables()
+                        }
+                        userViewModel.setCurrentUser(null)
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 },
                 onBack = { navController.popBackStack() }

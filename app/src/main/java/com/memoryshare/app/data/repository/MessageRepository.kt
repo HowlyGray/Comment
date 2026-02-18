@@ -1,7 +1,9 @@
 package com.memoryshare.app.data.repository
 
 import android.util.Log
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.memoryshare.app.data.local.dao.ConversationDao
 import com.memoryshare.app.data.local.dao.MessageDao
 import com.memoryshare.app.data.local.dao.MessageReactionDao
@@ -490,15 +492,14 @@ class MessageRepository(
      * Synchronise les conversations depuis Firebase vers la base de données locale
      */
     suspend fun syncConversationsFromFirebase() {
-        FirebaseManager.getCollection(
-            collection = FirebaseManager.Collections.CONVERSATIONS,
-            clazz = Conversation::class.java
-        ).onSuccess { conversations ->
-            conversations.forEach { conversation ->
-                conversationDao.insertConversation(conversation)
-            }
+        try {
+            val querySnapshot = firestore.collection(FirebaseManager.Collections.CONVERSATIONS)
+                .get()
+                .await()
+            val conversations = querySnapshot.documents.mapNotNull { it.toConversation() }
+            conversations.forEach { conversationDao.insertConversation(it) }
             Log.d(TAG, "Synced ${conversations.size} conversations from Firebase")
-        }.onFailure { e ->
+        } catch (e: Exception) {
             Log.e(TAG, "Failed to sync conversations from Firebase", e)
         }
     }
@@ -507,15 +508,14 @@ class MessageRepository(
      * Synchronise les messages depuis Firebase vers la base de données locale
      */
     suspend fun syncMessagesFromFirebase() {
-        FirebaseManager.getCollection(
-            collection = FirebaseManager.Collections.MESSAGES,
-            clazz = Message::class.java
-        ).onSuccess { messages ->
-            messages.forEach { message ->
-                messageDao.insertMessage(message)
-            }
+        try {
+            val querySnapshot = firestore.collection(FirebaseManager.Collections.MESSAGES)
+                .get()
+                .await()
+            val messages = querySnapshot.documents.mapNotNull { it.toMessage() }
+            messages.forEach { messageDao.insertMessage(it) }
             Log.d(TAG, "Synced ${messages.size} messages from Firebase")
-        }.onFailure { e ->
+        } catch (e: Exception) {
             Log.e(TAG, "Failed to sync messages from Firebase", e)
         }
     }
@@ -529,8 +529,7 @@ class MessageRepository(
                 .whereEqualTo("conversationId", conversationId)
                 .get()
                 .await()
-            
-            val messages = querySnapshot.documents.mapNotNull { it.toObject(Message::class.java) }
+            val messages = querySnapshot.documents.mapNotNull { it.toMessage() }
             messageDao.insertMessages(messages)
             Log.d(TAG, "Synced ${messages.size} messages for conversation $conversationId")
         } catch (e: Exception) {
@@ -542,33 +541,86 @@ class MessageRepository(
      * Démarre une synchronisation en temps réel pour une conversation
      */
     fun startRealtimeSync(conversationId: String): ListenerRegistration {
-        return FirebaseManager.observeCollection(
-            collection = FirebaseManager.Collections.MESSAGES,
-            queryBuilder = { it.whereEqualTo("conversationId", conversationId) },
-            clazz = Message::class.java,
-            onUpdate = { messages ->
-                scope.launch {
-                    messageDao.insertMessages(messages)
+        return firestore.collection(FirebaseManager.Collections.MESSAGES)
+            .whereEqualTo("conversationId", conversationId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e(TAG, "Error in realtime sync for $conversationId", e)
+                    return@addSnapshotListener
                 }
-            },
-            onError = { Log.e(TAG, "Error in realtime sync for $conversationId", it) }
-        )
+                val messages = snapshot?.documents?.mapNotNull { it.toMessage() } ?: emptyList()
+                scope.launch { messageDao.insertMessages(messages) }
+            }
     }
 
     /**
      * Démarre une synchronisation en temps réel pour toutes les conversations de l'utilisateur
      */
     fun startConversationsRealtimeSync(userId: String): ListenerRegistration {
-        return FirebaseManager.observeCollection(
-            collection = FirebaseManager.Collections.CONVERSATIONS,
-            queryBuilder = { it.whereArrayContains("participantIds", userId) },
-            clazz = Conversation::class.java,
-            onUpdate = { conversations ->
-                scope.launch {
-                    conversations.forEach { conversationDao.insertConversation(it) }
+        return firestore.collection(FirebaseManager.Collections.CONVERSATIONS)
+            .whereArrayContains("participantIds", userId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e(TAG, "Error in conversations realtime sync", e)
+                    return@addSnapshotListener
                 }
-            },
-            onError = { Log.e(TAG, "Error in conversations realtime sync", it) }
-        )
+                val conversations = snapshot?.documents?.mapNotNull { it.toConversation() } ?: emptyList()
+                scope.launch { conversations.forEach { conversationDao.insertConversation(it) } }
+            }
+    }
+
+    // ==================== CUSTOM FIRESTORE MAPPERS ====================
+    // These avoid Firestore's Java-bean convention which strips "is" from boolean property names
+
+    @Suppress("UNCHECKED_CAST")
+    private fun DocumentSnapshot.toMessage(): Message? {
+        return try {
+            Message(
+                id = getString("id") ?: id,
+                conversationId = getString("conversationId") ?: "",
+                senderId = getString("senderId") ?: "",
+                content = getString("content") ?: "",
+                type = MessageType.valueOf(getString("type") ?: "TEXT"),
+                timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
+                isRead = getBoolean("isRead") ?: false,
+                isStarred = getBoolean("isStarred") ?: false,
+                mediaUrl = getString("mediaUrl"),
+                mediaThumbnailUrl = getString("mediaThumbnailUrl"),
+                mediaDuration = getLong("mediaDuration"),
+                replyToId = getString("replyToId"),
+                editedAt = getLong("editedAt"),
+                status = try {
+                    MessageStatus.valueOf(getString("status") ?: "SENT")
+                } catch (_: Exception) { MessageStatus.SENT },
+                expiresAt = getLong("expiresAt")
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun DocumentSnapshot.toConversation(): Conversation? {
+        return try {
+            Conversation(
+                id = getString("id") ?: id,
+                name = getString("name"),
+                isGroup = getBoolean("isGroup") ?: false,
+                participantIds = get("participantIds") as? List<String> ?: emptyList(),
+                lastMessageText = getString("lastMessageText"),
+                lastMessageTime = getLong("lastMessageTime"),
+                imageUrl = getString("imageUrl"),
+                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
+                archived = getBoolean("archived") ?: false,
+                pinned = getBoolean("pinned") ?: false,
+                pinnedAt = getLong("pinnedAt"),
+                muted = getBoolean("muted") ?: false,
+                adminIds = get("adminIds") as? List<String> ?: emptyList(),
+                inviteLink = getString("inviteLink"),
+                ephemeralDuration = getLong("ephemeralDuration")
+            )
+        } catch (e: Exception) {
+            null
+        }
     }
 }

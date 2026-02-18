@@ -225,8 +225,13 @@ fun ContactDetailScreen(
                         icon = Icons.Default.Image,
                         title = "Médias, liens et documents",
                         onClick = {
-                            conversation?.let { conv ->
-                                navController.navigate("conversation_media/${conv.id}")
+                            currentUser?.let { current ->
+                                coroutineScope.launch {
+                                    val conv = conversation ?: messageViewModel.findOrCreateConversation(
+                                        participantIds = listOf(current.id, userId)
+                                    )
+                                    navController.navigate("conversation_media/${conv.id}")
+                                }
                             }
                         }
                     )
