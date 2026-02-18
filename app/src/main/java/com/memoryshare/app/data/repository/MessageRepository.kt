@@ -120,8 +120,8 @@ class MessageRepository(
         messageDao.insertMessage(message)
 
         // Mettre à jour la conversation avec le dernier message localement
-        conversation?.let {
-            val updatedConv = it.copy(
+        conversation?.let { conv ->
+            val updatedConv = conv.copy(
                 lastMessageText = content,
                 lastMessageTime = message.timestamp
             )
