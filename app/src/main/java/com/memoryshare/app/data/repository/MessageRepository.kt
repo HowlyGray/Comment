@@ -47,7 +47,7 @@ class MessageRepository(
         name: String? = null,
         isGroup: Boolean = false
     ): Conversation {
-        // Vérifier si une conversation existe déjà avec les mêmes participants
+        // Vérifier si une conversation existe déjà localement avec les mêmes participants
         if (!isGroup && participantIds.size == 2) {
             val existingConversations = conversationDao.getAllConversationsSync()
             val existingConversation = existingConversations.find { conv ->
@@ -57,6 +57,28 @@ class MessageRepository(
             }
             if (existingConversation != null) {
                 return existingConversation
+            }
+
+            // Vérifier aussi sur Firebase si une conversation existe déjà
+            try {
+                val snapshot = firestore.collection(FirebaseManager.Collections.CONVERSATIONS)
+                    .whereArrayContains("participantIds", participantIds[0])
+                    .get()
+                    .await()
+                val firebaseConversation = snapshot.documents
+                    .mapNotNull { it.toConversation() }
+                    .find { conv ->
+                        !conv.isGroup &&
+                        conv.participantIds.size == 2 &&
+                        conv.participantIds.containsAll(participantIds)
+                    }
+                if (firebaseConversation != null) {
+                    // Sauvegarder localement et retourner
+                    conversationDao.insertConversation(firebaseConversation)
+                    return firebaseConversation
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check Firebase for existing conversation", e)
             }
         }
 
@@ -70,8 +92,8 @@ class MessageRepository(
         // Sauvegarder localement
         conversationDao.insertConversation(conversation)
 
-        // Synchroniser avec Firebase
-        scope.launch {
+        // Synchroniser avec Firebase (attendre la confirmation pour que le destinataire puisse voir la conversation)
+        try {
             FirebaseManager.saveDocument(
                 collection = FirebaseManager.Collections.CONVERSATIONS,
                 documentId = conversation.id,
@@ -81,6 +103,8 @@ class MessageRepository(
             }.onFailure { e ->
                 Log.e(TAG, "Failed to sync conversation to Firebase: ${conversation.id}", e)
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception syncing conversation to Firebase: ${conversation.id}", e)
         }
 
         return conversation
@@ -127,20 +151,22 @@ class MessageRepository(
             )
             conversationDao.updateConversation(updatedConv)
 
-            // Synchroniser avec Firebase
-            scope.launch {
-                // Sauvegarder le message
+            // Synchroniser avec Firebase (attendre pour que le destinataire reçoive les données)
+            try {
+                // Sauvegarder le message sur Firebase
                 FirebaseManager.saveDocument(
                     collection = FirebaseManager.Collections.MESSAGES,
                     documentId = message.id,
                     data = message
                 ).onSuccess {
                     Log.d(TAG, "Message synced to Firebase: ${message.id}")
+                    // Marquer le message comme envoyé
+                    messageDao.updateMessageStatus(message.id, MessageStatus.SENT)
                 }.onFailure { e ->
                     Log.e(TAG, "Failed to sync message to Firebase: ${message.id}", e)
                 }
 
-                // Mettre à jour la conversation
+                // Mettre à jour la conversation sur Firebase
                 FirebaseManager.saveDocument(
                     collection = FirebaseManager.Collections.CONVERSATIONS,
                     documentId = updatedConv.id,
@@ -150,6 +176,8 @@ class MessageRepository(
                 }.onFailure { e ->
                     Log.e(TAG, "Failed to update conversation in Firebase: ${updatedConv.id}", e)
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception syncing message to Firebase: ${message.id}", e)
             }
         }
 
@@ -237,19 +265,45 @@ class MessageRepository(
             content = content,
             type = type,
             mediaUrl = mediaUrl,
-            replyToId = replyToId
+            replyToId = replyToId,
+            status = MessageStatus.SENDING
         )
         messageDao.insertMessage(message)
 
         // Mettre à jour la conversation
         val conversation = conversationDao.getConversationById(conversationId).firstOrNull()
         conversation?.let {
-            conversationDao.updateConversation(
-                it.copy(
-                    lastMessageText = content,
-                    lastMessageTime = message.timestamp
-                )
+            val updatedConv = it.copy(
+                lastMessageText = content,
+                lastMessageTime = message.timestamp
             )
+            conversationDao.updateConversation(updatedConv)
+
+            // Synchroniser avec Firebase
+            try {
+                FirebaseManager.saveDocument(
+                    collection = FirebaseManager.Collections.MESSAGES,
+                    documentId = message.id,
+                    data = message
+                ).onSuccess {
+                    Log.d(TAG, "Reply synced to Firebase: ${message.id}")
+                    messageDao.updateMessageStatus(message.id, MessageStatus.SENT)
+                }.onFailure { e ->
+                    Log.e(TAG, "Failed to sync reply to Firebase: ${message.id}", e)
+                }
+
+                FirebaseManager.saveDocument(
+                    collection = FirebaseManager.Collections.CONVERSATIONS,
+                    documentId = updatedConv.id,
+                    data = updatedConv
+                ).onSuccess {
+                    Log.d(TAG, "Conversation updated in Firebase: ${updatedConv.id}")
+                }.onFailure { e ->
+                    Log.e(TAG, "Failed to update conversation in Firebase: ${updatedConv.id}", e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception syncing reply to Firebase: ${message.id}", e)
+            }
         }
 
         return message
@@ -369,19 +423,41 @@ class MessageRepository(
                     content = message.content,
                     type = message.type,
                     mediaUrl = message.mediaUrl,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    status = MessageStatus.SENDING
                 )
                 messageDao.insertMessage(forwardedMessage)
 
                 // Update target conversation
                 val conversation = conversationDao.getConversationById(targetConversationId).firstOrNull()
                 conversation?.let { conv ->
-                    conversationDao.updateConversation(
-                        conv.copy(
-                            lastMessageText = forwardedMessage.content,
-                            lastMessageTime = forwardedMessage.timestamp
-                        )
+                    val updatedConv = conv.copy(
+                        lastMessageText = forwardedMessage.content,
+                        lastMessageTime = forwardedMessage.timestamp
                     )
+                    conversationDao.updateConversation(updatedConv)
+
+                    // Synchroniser avec Firebase
+                    try {
+                        FirebaseManager.saveDocument(
+                            collection = FirebaseManager.Collections.MESSAGES,
+                            documentId = forwardedMessage.id,
+                            data = forwardedMessage
+                        ).onSuccess {
+                            Log.d(TAG, "Forwarded message synced to Firebase: ${forwardedMessage.id}")
+                            messageDao.updateMessageStatus(forwardedMessage.id, MessageStatus.SENT)
+                        }.onFailure { e ->
+                            Log.e(TAG, "Failed to sync forwarded message to Firebase: ${forwardedMessage.id}", e)
+                        }
+
+                        FirebaseManager.saveDocument(
+                            collection = FirebaseManager.Collections.CONVERSATIONS,
+                            documentId = updatedConv.id,
+                            data = updatedConv
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Exception syncing forwarded message to Firebase: ${forwardedMessage.id}", e)
+                    }
                 }
             }
         }
