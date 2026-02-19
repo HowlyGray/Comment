@@ -198,8 +198,20 @@ fun AppNavigation(
         ) {
             AddContactScreen(
                 userViewModel = userViewModel,
-                onContactAdded = {
-                    navController.popBackStack()
+                currentUser = currentUser,
+                onUserSelected = { selectedUser ->
+                    currentUser?.let { user ->
+                        coroutineScope.launch {
+                            val conversation = messageViewModel.findOrCreateConversation(
+                                participantIds = listOf(user.id, selectedUser.id),
+                                name = null,
+                                isGroup = false
+                            )
+                            navController.navigate(Screen.MessageDetail.createRoute(conversation.id)) {
+                                popUpTo(Screen.Messages.route) { inclusive = false }
+                            }
+                        }
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )

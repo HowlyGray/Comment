@@ -18,6 +18,9 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE username LIKE '%' || :query || '%' OR displayName LIKE '%' || :query || '%'")
     fun searchUsers(query: String): Flow<List<User>>
 
+    @Query("SELECT * FROM users WHERE username LIKE '%' || :query || '%' OR displayName LIKE '%' || :query || '%' OR email LIKE '%' || :query || '%'")
+    fun searchUsersByAll(query: String): Flow<List<User>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: User)
 

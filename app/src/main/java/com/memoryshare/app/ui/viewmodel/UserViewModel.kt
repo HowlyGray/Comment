@@ -7,6 +7,7 @@ import com.memoryshare.app.data.local.PreferencesManager
 import com.memoryshare.app.data.model.User
 import com.memoryshare.app.data.repository.MessageRepository
 import com.memoryshare.app.data.repository.UserRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,6 +43,11 @@ class UserViewModel(
 
     private val _isAuthChecked = MutableStateFlow(false)
     val isAuthChecked: StateFlow<Boolean> = _isAuthChecked.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private var searchJob: Job? = null
 
     companion object {
         private const val TAG = "UserViewModel"
@@ -110,6 +116,40 @@ class UserViewModel(
             repository.searchUsers(query).collect { results ->
                 _searchResults.value = results
             }
+        }
+    }
+
+    /**
+     * Search users by username or email, combining local DB and Firebase results.
+     * First returns local matches instantly, then queries Firebase for exact matches
+     * on email/username and merges results.
+     */
+    fun searchUsersWithFirebase(query: String) {
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            _isSearching.value = false
+            return
+        }
+        searchJob = viewModelScope.launch {
+            _isSearching.value = true
+            // Immediately show local results (username, displayName, email)
+            repository.searchUsersByAll(query).firstOrNull()?.let { localResults ->
+                _searchResults.value = localResults
+            }
+            // Then query Firebase for exact email/username matches
+            try {
+                val firebaseResults = repository.searchUsersOnFirebase(query)
+                // Merge: local results + any new Firebase results
+                val currentIds = _searchResults.value.map { it.id }.toSet()
+                val newFromFirebase = firebaseResults.filter { it.id !in currentIds }
+                if (newFromFirebase.isNotEmpty()) {
+                    _searchResults.value = _searchResults.value + newFromFirebase
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Firebase search failed", e)
+            }
+            _isSearching.value = false
         }
     }
 
