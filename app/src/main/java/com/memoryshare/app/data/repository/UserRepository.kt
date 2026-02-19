@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class UserRepository(
@@ -31,6 +32,39 @@ class UserRepository(
     fun getUsersByIds(userIds: List<String>): Flow<List<User>> = userDao.getUsersByIds(userIds)
 
     fun searchUsers(query: String): Flow<List<User>> = userDao.searchUsers(query)
+
+    fun searchUsersByAll(query: String): Flow<List<User>> = userDao.searchUsersByAll(query)
+
+    /**
+     * Search users on Firebase by exact email or username, then cache results locally.
+     * Returns the list of matching users found on Firebase.
+     */
+    suspend fun searchUsersOnFirebase(query: String): List<User> {
+        val results = mutableMapOf<String, User>()
+        try {
+            // Search by exact email
+            val emailSnapshot = firestore.collection(FirebaseManager.Collections.USERS)
+                .whereEqualTo("email", query)
+                .get()
+                .await()
+            emailSnapshot.documents.mapNotNull { it.toObject(User::class.java) }
+                .forEach { results[it.id] = it }
+
+            // Search by exact username
+            val usernameSnapshot = firestore.collection(FirebaseManager.Collections.USERS)
+                .whereEqualTo("username", query)
+                .get()
+                .await()
+            usernameSnapshot.documents.mapNotNull { it.toObject(User::class.java) }
+                .forEach { results[it.id] = it }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to search users on Firebase", e)
+        }
+        // Cache found users locally
+        val users = results.values.toList()
+        users.forEach { userDao.insertUser(it) }
+        return users
+    }
 
     suspend fun createUser(
         username: String,
