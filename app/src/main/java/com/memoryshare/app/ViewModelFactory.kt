@@ -21,6 +21,93 @@ import com.memoryshare.app.utils.FirebaseStorageManager
 import com.memoryshare.app.utils.MediaCompressionManager
 import com.memoryshare.app.utils.MediaSyncManager
 
+/**
+ * Type-safe factory for creating ViewModels with their required dependencies.
+ */
+class UserViewModelFactory(
+    private val repository: UserRepository,
+    private val preferencesManager: PreferencesManager,
+    private val messageRepository: MessageRepository? = null
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
+            return UserViewModel(repository, preferencesManager, messageRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+class MessageViewModelFactory(
+    private val repository: MessageRepository,
+    private val context: Context? = null
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MessageViewModel::class.java)) {
+            val mediaSyncManager = createMediaSyncManager(context)
+            return MessageViewModel(repository, mediaSyncManager) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+class PostViewModelFactory(
+    private val repository: PostRepository,
+    private val context: Context? = null
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(PostViewModel::class.java)) {
+            val mediaSyncManager = createMediaSyncManager(context)
+            return PostViewModel(repository, mediaSyncManager) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+class SharedSpaceViewModelFactory(
+    private val repository: SharedSpaceRepository,
+    private val context: Context? = null
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SharedSpaceViewModel::class.java)) {
+            val mediaSyncManager = createMediaSyncManager(context)
+            return SharedSpaceViewModel(repository, mediaSyncManager) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+class StoryViewModelFactory(
+    private val repository: StoryRepository
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(StoryViewModel::class.java)) {
+            return StoryViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+class CallViewModelFactory(
+    private val repository: CallRepository
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CallViewModel::class.java)) {
+            return CallViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+/**
+ * Backward-compatible factory that delegates to the appropriate typed factory.
+ * Retained for compatibility with existing code that creates ViewModelFactory directly.
+ */
 class ViewModelFactory(
     private val repository: Any,
     private val preferencesManager: PreferencesManager? = null,
@@ -38,30 +125,15 @@ class ViewModelFactory(
                 ) as T
             }
             modelClass.isAssignableFrom(MessageViewModel::class.java) -> {
-                val mediaSyncManager = if (context != null) {
-                    val database = AppDatabase.getDatabase(context)
-                    val compressionManager = MediaCompressionManager(context)
-                    val storageManager = FirebaseStorageManager()
-                    MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
-                } else null
+                val mediaSyncManager = createMediaSyncManager(context)
                 MessageViewModel(repository as MessageRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(PostViewModel::class.java) -> {
-                val mediaSyncManager = if (context != null) {
-                    val database = AppDatabase.getDatabase(context)
-                    val compressionManager = MediaCompressionManager(context)
-                    val storageManager = FirebaseStorageManager()
-                    MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
-                } else null
+                val mediaSyncManager = createMediaSyncManager(context)
                 PostViewModel(repository as PostRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(SharedSpaceViewModel::class.java) -> {
-                val mediaSyncManager = if (context != null) {
-                    val database = AppDatabase.getDatabase(context)
-                    val compressionManager = MediaCompressionManager(context)
-                    val storageManager = FirebaseStorageManager()
-                    MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
-                } else null
+                val mediaSyncManager = createMediaSyncManager(context)
                 SharedSpaceViewModel(repository as SharedSpaceRepository, mediaSyncManager) as T
             }
             modelClass.isAssignableFrom(StoryViewModel::class.java) -> {
@@ -70,7 +142,16 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(CallViewModel::class.java) -> {
                 CallViewModel(repository as CallRepository) as T
             }
-            else -> throw IllegalArgumentException("Unknown ViewModel class")
+            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }
+}
+
+private fun createMediaSyncManager(context: Context?): MediaSyncManager? {
+    return if (context != null) {
+        val database = AppDatabase.getDatabase(context)
+        val compressionManager = MediaCompressionManager(context)
+        val storageManager = FirebaseStorageManager()
+        MediaSyncManager(context, database.mediaCacheDao(), compressionManager, storageManager)
+    } else null
 }

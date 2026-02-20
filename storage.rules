@@ -32,88 +32,154 @@ service firebase.storage {
       return request.resource.contentType.matches('audio/.*');
     }
 
-    // Profile pictures
-    match /profile_pictures/{userId}.jpg {
-      // Anyone can read profile pictures
-      allow read: if true;
-      // Only the user can upload/update their own profile picture
+    // Check that the uploader stored their uid in custom metadata
+    function isUploader() {
+      return resource.metadata['uploaderId'] == request.auth.uid;
+    }
+
+    // Profile pictures: /profile_pictures/{userId}.jpg
+    match /profile_pictures/{fileName} {
+      allow read: if isSignedIn();
+      // Only the user can upload their own profile picture (filename = uid.jpg)
       allow write: if isSignedIn() &&
-                     request.auth.uid == userId &&
+                     fileName.matches(request.auth.uid + '.*') &&
                      isImage() &&
                      isValidImageSize();
     }
 
-    // Post images
+    // Post media: /post_media/{userId}/{fileName}
+    match /post_media/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      // Only the owner of the folder can upload
+      allow create: if isSignedIn() &&
+                      request.auth.uid == userId &&
+                      ((isImage() && isValidImageSize()) ||
+                       (isVideo() && isValidVideoSize()));
+      // Only the owner of the folder can delete
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Legacy post images: /post_images/{imageId}
     match /post_images/{imageId} {
-      // Anyone can read post images
-      allow read: if true;
-      // Only signed-in users can upload images
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                      isImage() &&
+                      isValidImageSize() &&
+                      request.resource.metadata['uploaderId'] == request.auth.uid;
+      // Only the uploader can delete (checked via custom metadata)
+      allow delete: if isSignedIn() && isUploader();
+    }
+
+    // Legacy post videos: /post_videos/{videoId}
+    match /post_videos/{videoId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                      isVideo() &&
+                      isValidVideoSize() &&
+                      request.resource.metadata['uploaderId'] == request.auth.uid;
+      allow delete: if isSignedIn() && isUploader();
+    }
+
+    // Chat images: /chat_images/{conversationId}/{fileName}
+    match /chat_images/{conversationId}/{fileName} {
+      allow read: if isSignedIn();
       allow create: if isSignedIn() &&
                       isImage() &&
                       isValidImageSize();
-      // Only the uploader can delete (we store uploader info in metadata)
-      allow delete: if isSignedIn();
+      // Only the uploader (stored in metadata) can delete
+      allow delete: if isSignedIn() && isUploader();
     }
 
-    // Post videos
-    match /post_videos/{videoId} {
-      // Anyone can read post videos
-      allow read: if true;
-      // Only signed-in users can upload videos
+    // Chat videos: /chat_videos/{conversationId}/{fileName}
+    match /chat_videos/{conversationId}/{fileName} {
+      allow read: if isSignedIn();
       allow create: if isSignedIn() &&
                       isVideo() &&
                       isValidVideoSize();
-      // Only the uploader can delete
-      allow delete: if isSignedIn();
+      allow delete: if isSignedIn() && isUploader();
     }
 
-    // Message media (images, videos, audio)
-    match /message_media/{mediaId} {
-      // Only signed-in users can read message media
+    // Chat audio: /chat_audio/{conversationId}/{fileName}
+    match /chat_audio/{conversationId}/{fileName} {
       allow read: if isSignedIn();
-      // Only signed-in users can upload message media
+      allow create: if isSignedIn() &&
+                      isAudio() &&
+                      isValidAudioSize();
+      allow delete: if isSignedIn() && isUploader();
+    }
+
+    // Chat files: /chat_files/{conversationId}/{fileName}
+    match /chat_files/{conversationId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                      request.resource.size < 100 * 1024 * 1024; // 100 MB max
+      allow delete: if isSignedIn() && isUploader();
+    }
+
+    // Message media (legacy flat path): /message_media/{mediaId}
+    match /message_media/{mediaId} {
+      allow read: if isSignedIn();
       allow create: if isSignedIn() &&
                       ((isImage() && isValidImageSize()) ||
                        (isVideo() && isValidVideoSize()) ||
                        (isAudio() && isValidAudioSize()));
-      // Only the uploader can delete
-      allow delete: if isSignedIn();
+      allow delete: if isSignedIn() && isUploader();
     }
 
-    // Space media (shared spaces)
-    match /space_media/{spaceId}/{mediaId} {
-      // Only signed-in users can read space media
+    // Shared space media: /shared_space_media/{spaceId}/{fileName}
+    match /shared_space_media/{spaceId}/{fileName} {
       allow read: if isSignedIn();
-      // Only signed-in users can upload space media
       allow create: if isSignedIn() &&
                       ((isImage() && isValidImageSize()) ||
                        (isVideo() && isValidVideoSize()));
-      // Only the uploader can delete
-      allow delete: if isSignedIn();
+      allow delete: if isSignedIn() && isUploader();
     }
 
-    // Story media
+    // Legacy space media path
+    match /space_media/{spaceId}/{mediaId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                      ((isImage() && isValidImageSize()) ||
+                       (isVideo() && isValidVideoSize()));
+      allow delete: if isSignedIn() && isUploader();
+    }
+
+    // Story media: /story_media/{userId}/{fileName}
+    match /story_media/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                      request.auth.uid == userId &&
+                      ((isImage() && isValidImageSize()) ||
+                       (isVideo() && isValidVideoSize()));
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Legacy story media (flat path)
     match /story_media/{storyId} {
-      // Anyone can read stories
-      allow read: if true;
-      // Only signed-in users can upload stories
+      allow read: if isSignedIn();
       allow create: if isSignedIn() &&
                       ((isImage() && isValidImageSize()) ||
                        (isVideo() && isValidVideoSize()));
-      // Only the uploader can delete
-      allow delete: if isSignedIn();
+      allow delete: if isSignedIn() && isUploader();
     }
 
-    // Audio files
+    // Reel videos: /reel_videos/{userId}/{fileName}
+    match /reel_videos/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                      request.auth.uid == userId &&
+                      isVideo() &&
+                      isValidVideoSize();
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Audio files (legacy flat path)
     match /audios/{audioId} {
-      // Anyone can read audio files
-      allow read: if true;
-      // Only signed-in users can upload audio
+      allow read: if isSignedIn();
       allow create: if isSignedIn() &&
                       isAudio() &&
                       isValidAudioSize();
-      // Only the uploader can delete
-      allow delete: if isSignedIn();
+      allow delete: if isSignedIn() && isUploader();
     }
   }
 }

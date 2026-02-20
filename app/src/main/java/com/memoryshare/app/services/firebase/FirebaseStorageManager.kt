@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.storage.StorageMetadata
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.Dispatchers
@@ -283,6 +285,16 @@ class FirebaseStorageManager(private val context: Context) {
     // ==================== CORE UPLOAD METHODS ====================
 
     /**
+     * Build storage metadata with uploaderId for ownership verification in Storage rules.
+     */
+    private fun buildMetadata(): StorageMetadata {
+        val uid = Firebase.auth.currentUser?.uid ?: ""
+        return StorageMetadata.Builder()
+            .setCustomMetadata("uploaderId", uid)
+            .build()
+    }
+
+    /**
      * Upload image with optional compression
      */
     private suspend fun uploadImage(
@@ -299,7 +311,7 @@ class FirebaseStorageManager(private val context: Context) {
             }
 
             val ref = storageRef.child(path)
-            ref.putBytes(bytes).await()
+            ref.putBytes(bytes, buildMetadata()).await()
             val downloadUrl = ref.downloadUrl.await()
 
             Result.success(downloadUrl.toString())
@@ -316,7 +328,7 @@ class FirebaseStorageManager(private val context: Context) {
             try {
                 val bytes = createThumbnail(uri)
                 val ref = storageRef.child(path)
-                ref.putBytes(bytes).await()
+                ref.putBytes(bytes, buildMetadata()).await()
                 val downloadUrl = ref.downloadUrl.await()
                 Result.success(downloadUrl.toString())
             } catch (e: Exception) {
@@ -330,7 +342,7 @@ class FirebaseStorageManager(private val context: Context) {
     private suspend fun uploadFile(uri: Uri, path: String): String =
         withContext(Dispatchers.IO) {
             val ref = storageRef.child(path)
-            ref.putFile(uri).await()
+            ref.putFile(uri, buildMetadata()).await()
             ref.downloadUrl.await().toString()
         }
 
@@ -341,7 +353,7 @@ class FirebaseStorageManager(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val ref = storageRef.child(path)
-                ref.putBytes(bytes).await()
+                ref.putBytes(bytes, buildMetadata()).await()
                 val downloadUrl = ref.downloadUrl.await()
                 Result.success(downloadUrl.toString())
             } catch (e: Exception) {
@@ -352,16 +364,38 @@ class FirebaseStorageManager(private val context: Context) {
     // ==================== IMAGE PROCESSING ====================
 
     /**
-     * Compress image
+     * Compress image with memory-safe decoding.
+     * Uses inSampleSize to avoid OOM on very large images.
      */
     private fun compressImage(uri: Uri): ByteArray {
+        // First pass: decode bounds only to calculate inSampleSize
+        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, boundsOptions)
+        } ?: throw Exception("Cannot open image")
+
+        // Calculate inSampleSize to load a smaller bitmap into memory
+        var inSampleSize = 1
+        val width = boundsOptions.outWidth
+        val height = boundsOptions.outHeight
+        if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+            val halfWidth = width / 2
+            val halfHeight = height / 2
+            while (halfWidth / inSampleSize >= MAX_IMAGE_DIMENSION
+                && halfHeight / inSampleSize >= MAX_IMAGE_DIMENSION) {
+                inSampleSize *= 2
+            }
+        }
+
+        // Second pass: decode with inSampleSize
+        val decodeOptions = BitmapFactory.Options().apply { this.inSampleSize = inSampleSize }
         val inputStream = context.contentResolver.openInputStream(uri)
             ?: throw Exception("Cannot open image")
-
-        val originalBitmap = BitmapFactory.decodeStream(inputStream)
+        val originalBitmap = BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+            ?: throw Exception("Cannot decode image")
         inputStream.close()
 
-        // Calculate scale
+        // Fine-scale to exact max dimension
         val scale = minOf(
             MAX_IMAGE_DIMENSION.toFloat() / originalBitmap.width,
             MAX_IMAGE_DIMENSION.toFloat() / originalBitmap.height,

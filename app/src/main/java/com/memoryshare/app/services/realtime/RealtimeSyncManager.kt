@@ -12,10 +12,13 @@ import com.memoryshare.app.data.local.dao.MessageDao
 import com.memoryshare.app.data.model.Conversation
 import com.memoryshare.app.data.model.Message
 import com.memoryshare.app.data.model.MessageType
+import com.memoryshare.app.utils.FirestoreMappers.toConversation
+import com.memoryshare.app.utils.FirestoreMappers.toMessage
 import com.memoryshare.app.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -35,6 +38,10 @@ class RealtimeSyncManager(
         private const val TAG = "RealtimeSyncManager"
         private const val CONVERSATIONS = "conversations"
         private const val MESSAGES = "messages"
+        // Max concurrent message listeners to limit resource usage
+        private const val MAX_MESSAGE_LISTENERS = 20
+        // Max messages to sync per conversation
+        private const val MESSAGE_SYNC_LIMIT = 100
     }
 
     private val db: FirebaseFirestore = Firebase.firestore
@@ -99,16 +106,30 @@ class RealtimeSyncManager(
     }
 
     /**
-     * Start syncing messages for a conversation
+     * Start syncing messages for a conversation.
+     * Uses the subcollection path: conversations/{conversationId}/messages
+     * to match FirestoreManager's storage format.
+     * Limits concurrent listeners to MAX_MESSAGE_LISTENERS.
      */
     fun startMessagesSync(conversationId: String) {
         if (messageListeners.containsKey(conversationId)) {
             return // Already listening
         }
+
+        // Limit concurrent listeners to avoid excessive resource usage
+        if (messageListeners.size >= MAX_MESSAGE_LISTENERS) {
+            // Remove the oldest listener
+            val oldest = messageListeners.keys.firstOrNull()
+            oldest?.let { stopMessagesSync(it) }
+        }
+
         Log.d(TAG, "Starting messages sync for conversation: $conversationId")
 
-        val listener = db.collection(MESSAGES)
-            .whereEqualTo("conversationId", conversationId)
+        val listener = db.collection(CONVERSATIONS)
+            .document(conversationId)
+            .collection(MESSAGES)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .limitToLast(MESSAGE_SYNC_LIMIT.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e(TAG, "Messages sync error for $conversationId", error)
@@ -123,13 +144,12 @@ class RealtimeSyncManager(
                             DocumentChange.Type.ADDED -> {
                                 message?.let { msg ->
                                     messageDao.insertMessage(msg)
-                                    // Notifier pour les nouveaux messages reçus (pas les nôtres)
                                     if (msg.senderId != currentUserId && context != null) {
                                         val preview = when (msg.type) {
                                             MessageType.IMAGE -> "Photo"
-                                            MessageType.VIDEO -> "Vidéo"
+                                            MessageType.VIDEO -> "Video"
                                             MessageType.AUDIO -> "Audio"
-                                            MessageType.FILE -> "Fichier"
+                                            MessageType.FILE -> "File"
                                             else -> msg.content
                                         }
                                         NotificationHelper.notifyNewMessage(
@@ -219,10 +239,12 @@ class RealtimeSyncManager(
                 doc.toConversation()?.let { conversation ->
                     conversationDao.insertConversation(conversation)
 
-                    // Sync messages for each conversation
+                    // Sync latest messages for each conversation
                     val messagesSnapshot = db.collection(CONVERSATIONS)
                         .document(conversation.id)
                         .collection(MESSAGES)
+                        .orderBy("timestamp", Query.Direction.DESCENDING)
+                        .limit(MESSAGE_SYNC_LIMIT.toLong())
                         .get()
                         .await()
 
@@ -250,6 +272,8 @@ class RealtimeSyncManager(
             val messagesSnapshot = db.collection(CONVERSATIONS)
                 .document(conversationId)
                 .collection(MESSAGES)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(MESSAGE_SYNC_LIMIT.toLong())
                 .get()
                 .await()
 
@@ -283,52 +307,7 @@ class RealtimeSyncManager(
     fun cleanup() {
         stopAllSync()
         currentUserId = null
+        scope.cancel()
     }
 
-    // Extension functions for document conversion
-    @Suppress("UNCHECKED_CAST")
-    private fun com.google.firebase.firestore.DocumentSnapshot.toConversation(): Conversation? {
-        return try {
-            Conversation(
-                id = getString("id") ?: id,
-                name = getString("name"),
-                isGroup = getBoolean("isGroup") ?: false,
-                participantIds = get("participantIds") as? List<String> ?: emptyList(),
-                lastMessageText = getString("lastMessageText"),
-                lastMessageTime = getLong("lastMessageTime"),
-                imageUrl = getString("imageUrl"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
-                archived = getBoolean("archived") ?: false,
-                pinned = getBoolean("pinned") ?: false,
-                pinnedAt = getLong("pinnedAt"),
-                muted = getBoolean("muted") ?: false
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to convert document to Conversation", e)
-            null
-        }
-    }
-
-    private fun com.google.firebase.firestore.DocumentSnapshot.toMessage(): Message? {
-        return try {
-            Message(
-                id = getString("id") ?: id,
-                conversationId = getString("conversationId") ?: "",
-                senderId = getString("senderId") ?: "",
-                content = getString("content") ?: "",
-                type = MessageType.valueOf(getString("type") ?: "TEXT"),
-                timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
-                isRead = getBoolean("isRead") ?: false,
-                isStarred = getBoolean("isStarred") ?: false,
-                mediaUrl = getString("mediaUrl"),
-                mediaThumbnailUrl = getString("mediaThumbnailUrl"),
-                mediaDuration = getLong("mediaDuration"),
-                replyToId = getString("replyToId"),
-                editedAt = getLong("editedAt")
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to convert document to Message", e)
-            null
-        }
-    }
 }
