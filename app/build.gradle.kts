@@ -9,6 +9,10 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.memoryshare.app"
     compileSdk = 36
@@ -16,8 +20,7 @@ android {
     defaultConfig {
         applicationId = "com.memoryshare.app"
         minSdk = 26
-        //noinspection OldTargetApi
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -25,11 +28,19 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Agora App ID from local.properties or environment
+        buildConfigField(
+            "String",
+            "AGORA_APP_ID",
+            "\"${project.findProperty("AGORA_APP_ID") ?: "YOUR_AGORA_APP_ID"}\""
+        )
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -50,6 +61,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

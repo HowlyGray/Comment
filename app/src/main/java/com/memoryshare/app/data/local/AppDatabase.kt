@@ -27,7 +27,7 @@ import com.memoryshare.app.data.model.*
         MediaCache::class
     ],
     version = 11,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {

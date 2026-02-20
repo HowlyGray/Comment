@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.view.SurfaceView
 import android.view.TextureView
+import com.memoryshare.app.BuildConfig
 import io.agora.rtc2.*
 import io.agora.rtc2.video.VideoCanvas
 import io.agora.rtc2.video.VideoEncoderConfiguration
@@ -20,9 +21,8 @@ class AgoraManager(private val context: Context) {
     companion object {
         private const val TAG = "AgoraManager"
 
-        // Replace with your Agora App ID from https://console.agora.io/
-        // IMPORTANT: In production, this should be retrieved from a secure backend
-        const val APP_ID = "YOUR_AGORA_APP_ID"
+        // Agora App ID is read from BuildConfig (set via local.properties: AGORA_APP_ID=xxx)
+        val APP_ID: String = BuildConfig.AGORA_APP_ID
     }
 
     // RTC Engine

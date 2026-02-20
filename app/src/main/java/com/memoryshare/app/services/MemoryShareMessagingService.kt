@@ -14,14 +14,21 @@ import androidx.core.graphics.drawable.IconCompat
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.memoryshare.app.MainActivity
+import com.memoryshare.app.MemoryShareApplication
 import com.memoryshare.app.R
+import com.memoryshare.app.data.model.Message
+import com.memoryshare.app.data.model.MessageStatus
+import com.memoryshare.app.data.model.MessageType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /**
  * Firebase Cloud Messaging Service
@@ -77,8 +84,7 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
      * Called when a new FCM token is generated
      */
     override fun onNewToken(token: String) {
-        Log.d(TAG, "New FCM token: $token")
-        // Save token to server
+        Log.d(TAG, "New FCM token received")
         saveTokenToServer(token)
     }
 
@@ -472,31 +478,71 @@ class MemoryShareMessagingService : FirebaseMessagingService() {
     }
 
     /**
-     * Save FCM token to server
+     * Save FCM token to Firestore for the current user
      */
     private fun saveTokenToServer(token: String) {
-        // This should be called with the current user ID when they're logged in
-        // For now, just log it
-        Log.d(TAG, "FCM Token to save: $token")
-
-        // In a real implementation:
-        // firestoreManager.saveFcmToken(currentUserId, token)
+        val userId = Firebase.auth.currentUser?.uid
+        if (userId == null) {
+            Log.w(TAG, "Cannot save FCM token: no authenticated user")
+            return
+        }
+        serviceScope.launch {
+            try {
+                val app = applicationContext as? MemoryShareApplication
+                app?.firestoreManager?.saveFcmToken(userId, token)
+                Log.d(TAG, "FCM token saved for user $userId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save FCM token", e)
+            }
+        }
     }
 }
 
 /**
- * Broadcast receiver for direct reply from notification
+ * Broadcast receiver for direct reply from notification.
+ * Sends the reply message via Firestore and dismisses the notification.
  */
 class DirectReplyReceiver : android.content.BroadcastReceiver() {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onReceive(context: Context, intent: Intent) {
         val conversationId = intent.getStringExtra("conversationId") ?: return
         val remoteInput = androidx.core.app.RemoteInput.getResultsFromIntent(intent)
         val replyText = remoteInput?.getCharSequence("reply_text")?.toString() ?: return
 
-        Log.d("DirectReplyReceiver", "Reply to $conversationId: $replyText")
+        val currentUserId = Firebase.auth.currentUser?.uid ?: return
 
-        // Send the reply message
-        // This would need access to the repository/viewmodel to send the message
-        // In a real implementation, you'd use WorkManager or a bound service
+        val pendingResult = goAsync()
+
+        scope.launch {
+            try {
+                val app = context.applicationContext as? MemoryShareApplication ?: return@launch
+                val message = Message(
+                    id = UUID.randomUUID().toString(),
+                    conversationId = conversationId,
+                    senderId = currentUserId,
+                    content = replyText,
+                    type = MessageType.TEXT,
+                    timestamp = System.currentTimeMillis(),
+                    status = MessageStatus.SENT
+                )
+                app.firestoreManager.sendMessage(conversationId, message)
+
+                // Update notification to show reply was sent
+                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val updatedNotification = NotificationCompat.Builder(context, MemoryShareMessagingService.CHANNEL_MESSAGES)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentText("Reply sent")
+                    .build()
+                notificationManager.notify(conversationId.hashCode(), updatedNotification)
+
+                Log.d("DirectReplyReceiver", "Reply sent to $conversationId")
+            } catch (e: Exception) {
+                Log.e("DirectReplyReceiver", "Failed to send reply", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 }

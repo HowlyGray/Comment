@@ -1,13 +1,18 @@
 package com.memoryshare.app.services.firebase
 
 import com.google.firebase.Firebase
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.memoryshare.app.data.model.*
+import com.memoryshare.app.utils.FirestoreMappers.toConversation
+import com.memoryshare.app.utils.FirestoreMappers.toMessage
+import com.memoryshare.app.utils.FirestoreMappers.toPost
+import com.memoryshare.app.utils.FirestoreMappers.toSharedSpace
+import com.memoryshare.app.utils.FirestoreMappers.toStory
+import com.memoryshare.app.utils.FirestoreMappers.toUser
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -38,6 +43,8 @@ class FirestoreManager {
         const val CALLS = "calls"
         const val PRESENCE = "presence"
         const val FCM_TOKENS = "fcm_tokens"
+        // Firestore batch operation limit
+        private const val BATCH_LIMIT = 500
     }
 
     // ==================== USER OPERATIONS ====================
@@ -154,17 +161,18 @@ class FirestoreManager {
         }
     }
 
-    fun observeMessages(conversationId: String): Flow<List<Message>> = callbackFlow {
+    fun observeMessages(conversationId: String, limit: Int = 100): Flow<List<Message>> = callbackFlow {
         val listener = db.collection(CONVERSATIONS)
             .document(conversationId)
             .collection(MESSAGES)
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
-                val messages = snapshot?.documents?.mapNotNull { it.toMessage() } ?: emptyList()
+                val messages = snapshot?.documents?.mapNotNull { it.toMessage() }?.reversed() ?: emptyList()
                 trySend(messages)
             }
         awaitClose { listener.remove() }
@@ -415,25 +423,32 @@ class FirestoreManager {
         }
     }
 
-    // Marque tous les messages comme READ lors de l'ouverture de la conversation
+    // Marks unread messages as READ when the conversation is opened.
+    // Uses chunked batches (Firestore limit: 500 operations per batch).
     suspend fun markConversationMessagesRead(
         conversationId: String,
         currentUserId: String
     ): Result<Unit> {
         return try {
-            val batch = db.batch()
             val messages = db.collection(CONVERSATIONS)
                 .document(conversationId)
                 .collection(MESSAGES)
                 .whereNotEqualTo("senderId", currentUserId)
                 .get()
                 .await()
-            messages.documents
+
+            val unreadDocs = messages.documents
                 .filter { it.getString("status") != MessageStatus.READ.name }
-                .forEach { doc ->
+
+            // Firestore batch limit is 500 operations
+            unreadDocs.chunked(BATCH_LIMIT).forEach { chunk ->
+                val batch = db.batch()
+                chunk.forEach { doc ->
                     batch.update(doc.reference, "status", MessageStatus.READ.name)
                 }
-            batch.commit().await()
+                batch.commit().await()
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -641,22 +656,6 @@ class FirestoreManager {
         "createdAt" to createdAt
     )
 
-    private fun DocumentSnapshot.toUser(): User? {
-        return try {
-            User(
-                id = getString("id") ?: id,
-                username = getString("username") ?: "",
-                displayName = getString("displayName") ?: "",
-                email = getString("email") ?: "",
-                profilePictureUrl = getString("profilePictureUrl"),
-                bio = getString("bio"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis()
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun Conversation.toMap(): Map<String, Any?> = mapOf(
         "id" to id,
         "name" to name,
@@ -674,31 +673,6 @@ class FirestoreManager {
         "inviteLink" to inviteLink,
         "ephemeralDuration" to ephemeralDuration
     )
-
-    @Suppress("UNCHECKED_CAST")
-    private fun DocumentSnapshot.toConversation(): Conversation? {
-        return try {
-            Conversation(
-                id = getString("id") ?: id,
-                name = getString("name"),
-                isGroup = getBoolean("isGroup") ?: false,
-                participantIds = get("participantIds") as? List<String> ?: emptyList(),
-                lastMessageText = getString("lastMessageText"),
-                lastMessageTime = getLong("lastMessageTime"),
-                imageUrl = getString("imageUrl"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
-                archived = getBoolean("archived") ?: false,
-                pinned = getBoolean("pinned") ?: false,
-                pinnedAt = getLong("pinnedAt"),
-                muted = getBoolean("muted") ?: false,
-                adminIds = get("adminIds") as? List<String> ?: emptyList(),
-                inviteLink = getString("inviteLink"),
-                ephemeralDuration = getLong("ephemeralDuration")
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     private fun Message.toMap(): Map<String, Any?> = mapOf(
         "id" to id,
@@ -718,30 +692,6 @@ class FirestoreManager {
         "expiresAt" to expiresAt
     )
 
-    private fun DocumentSnapshot.toMessage(): Message? {
-        return try {
-            Message(
-                id = getString("id") ?: id,
-                conversationId = getString("conversationId") ?: "",
-                senderId = getString("senderId") ?: "",
-                content = getString("content") ?: "",
-                type = MessageType.valueOf(getString("type") ?: "TEXT"),
-                timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
-                isRead = getBoolean("isRead") ?: false,
-                isStarred = getBoolean("isStarred") ?: false,
-                mediaUrl = getString("mediaUrl"),
-                mediaThumbnailUrl = getString("mediaThumbnailUrl"),
-                mediaDuration = getLong("mediaDuration"),
-                replyToId = getString("replyToId"),
-                editedAt = getLong("editedAt"),
-                status = try { MessageStatus.valueOf(getString("status") ?: "SENT") } catch (_: Exception) { MessageStatus.SENT },
-                expiresAt = getLong("expiresAt")
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun Post.toMap(): Map<String, Any?> = mapOf(
         "id" to id,
         "authorId" to authorId,
@@ -754,29 +704,6 @@ class FirestoreManager {
         "visibility" to visibility.name
     )
 
-    private fun DocumentSnapshot.toPost(): Post? {
-        return try {
-            @Suppress("UNCHECKED_CAST")
-            Post(
-                id = getString("id") ?: id,
-                authorId = getString("authorId") ?: "",
-                caption = getString("caption"),
-                mediaUrls = get("mediaUrls") as? List<String> ?: emptyList(),
-                mediaType = PostMediaType.valueOf(getString("mediaType") ?: "IMAGE"),
-                timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
-                likeCount = getLong("likeCount")?.toInt() ?: 0,
-                commentCount = getLong("commentCount")?.toInt() ?: 0,
-                visibility = try {
-                    PostVisibility.valueOf(getString("visibility") ?: "PUBLIC")
-                } catch (e: Exception) {
-                    PostVisibility.PUBLIC
-                }
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun Story.toMap(): Map<String, Any?> = mapOf(
         "id" to id,
         "authorId" to authorId,
@@ -787,24 +714,6 @@ class FirestoreManager {
         "viewedBy" to viewedBy,
         "viewCount" to viewCount
     )
-
-    @Suppress("UNCHECKED_CAST")
-    private fun DocumentSnapshot.toStory(): Story? {
-        return try {
-            Story(
-                id = getString("id") ?: id,
-                authorId = getString("authorId") ?: "",
-                mediaUrl = getString("mediaUrl") ?: "",
-                mediaType = StoryMediaType.valueOf(getString("mediaType") ?: "IMAGE"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
-                expiresAt = getLong("expiresAt") ?: System.currentTimeMillis(),
-                viewedBy = get("viewedBy") as? List<String> ?: emptyList(),
-                viewCount = getLong("viewCount")?.toInt() ?: 0
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     private fun SharedSpace.toMap(): Map<String, Any?> = mapOf(
         "id" to id,
@@ -818,24 +727,6 @@ class FirestoreManager {
         "mediaCount" to mediaCount
     )
 
-    @Suppress("UNCHECKED_CAST")
-    private fun DocumentSnapshot.toSharedSpace(): SharedSpace? {
-        return try {
-            SharedSpace(
-                id = getString("id") ?: id,
-                name = getString("name") ?: "",
-                description = getString("description"),
-                creatorId = getString("creatorId") ?: "",
-                memberIds = get("memberIds") as? List<String> ?: emptyList(),
-                coverImageUrl = getString("coverImageUrl"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
-                lastActivityAt = getLong("lastActivityAt") ?: System.currentTimeMillis(),
-                mediaCount = getLong("mediaCount")?.toInt() ?: 0
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     private fun Media.toMap(): Map<String, Any?> = mapOf(
         "id" to id,

@@ -13,6 +13,7 @@ import com.memoryshare.app.data.model.PrivacyVisibility
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -357,6 +358,7 @@ class PresenceManager : DefaultLifecycleObserver {
         presenceListener?.remove()
         typingListeners.values.forEach { it.remove() }
         typingListeners.clear()
+        scope.cancel()
     }
 
     /**

@@ -1,7 +1,6 @@
 package com.memoryshare.app.data.repository
 
 import android.util.Log
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.memoryshare.app.data.local.dao.ConversationDao
@@ -13,6 +12,8 @@ import com.memoryshare.app.data.model.MessageReaction
 import com.memoryshare.app.data.model.MessageStatus
 import com.memoryshare.app.data.model.MessageType
 import com.memoryshare.app.utils.FirebaseManager
+import com.memoryshare.app.utils.FirestoreMappers.toConversation
+import com.memoryshare.app.utils.FirestoreMappers.toMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -652,58 +653,4 @@ class MessageRepository(
             }
     }
 
-    // ==================== CUSTOM FIRESTORE MAPPERS ====================
-    // These avoid Firestore's Java-bean convention which strips "is" from boolean property names
-
-    @Suppress("UNCHECKED_CAST")
-    private fun DocumentSnapshot.toMessage(): Message? {
-        return try {
-            Message(
-                id = getString("id") ?: id,
-                conversationId = getString("conversationId") ?: "",
-                senderId = getString("senderId") ?: "",
-                content = getString("content") ?: "",
-                type = MessageType.valueOf(getString("type") ?: "TEXT"),
-                timestamp = getLong("timestamp") ?: System.currentTimeMillis(),
-                isRead = getBoolean("isRead") ?: false,
-                isStarred = getBoolean("isStarred") ?: false,
-                mediaUrl = getString("mediaUrl"),
-                mediaThumbnailUrl = getString("mediaThumbnailUrl"),
-                mediaDuration = getLong("mediaDuration"),
-                replyToId = getString("replyToId"),
-                editedAt = getLong("editedAt"),
-                status = try {
-                    MessageStatus.valueOf(getString("status") ?: "SENT")
-                } catch (_: Exception) { MessageStatus.SENT },
-                expiresAt = getLong("expiresAt")
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun DocumentSnapshot.toConversation(): Conversation? {
-        return try {
-            Conversation(
-                id = getString("id") ?: id,
-                name = getString("name"),
-                isGroup = getBoolean("isGroup") ?: false,
-                participantIds = get("participantIds") as? List<String> ?: emptyList(),
-                lastMessageText = getString("lastMessageText"),
-                lastMessageTime = getLong("lastMessageTime"),
-                imageUrl = getString("imageUrl"),
-                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
-                archived = getBoolean("archived") ?: false,
-                pinned = getBoolean("pinned") ?: false,
-                pinnedAt = getLong("pinnedAt"),
-                muted = getBoolean("muted") ?: false,
-                adminIds = get("adminIds") as? List<String> ?: emptyList(),
-                inviteLink = getString("inviteLink"),
-                ephemeralDuration = getLong("ephemeralDuration")
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
 }
