@@ -12,7 +12,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.memoryshare.app.MainActivity
 import com.memoryshare.app.R
-import com.memoryshare.app.services.calls.AgoraManager
+import com.memoryshare.app.services.calls.JitsiMeetManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +39,6 @@ class CallService : Service() {
         const val ACTION_SPEAKER_ON = "com.memoryshare.SPEAKER_ON"
         const val ACTION_SPEAKER_OFF = "com.memoryshare.SPEAKER_OFF"
         const val ACTION_TOGGLE_VIDEO = "com.memoryshare.TOGGLE_VIDEO"
-        const val ACTION_SWITCH_CAMERA = "com.memoryshare.SWITCH_CAMERA"
         const val ACTION_DECLINE_CALL = "DECLINE_CALL"
 
         // Extras
@@ -49,6 +48,8 @@ class CallService : Service() {
         const val EXTRA_CALLER_ID = "caller_id"
         const val EXTRA_CALL_ID = "callId"
         const val EXTRA_IS_VIDEO = "is_video"
+        const val EXTRA_DISPLAY_NAME = "display_name"
+        const val EXTRA_AVATAR_URL = "avatar_url"
 
         // Helper method to start call service
         fun startVoiceCall(
@@ -56,14 +57,16 @@ class CallService : Service() {
             channelName: String,
             callerName: String,
             callerId: String,
-            token: String? = null
+            displayName: String? = null,
+            avatarUrl: String? = null
         ) {
             val intent = Intent(context, CallService::class.java).apply {
                 action = ACTION_START_VOICE_CALL
                 putExtra(EXTRA_CHANNEL_NAME, channelName)
                 putExtra(EXTRA_CALLER_NAME, callerName)
                 putExtra(EXTRA_CALLER_ID, callerId)
-                putExtra(EXTRA_TOKEN, token)
+                putExtra(EXTRA_DISPLAY_NAME, displayName)
+                putExtra(EXTRA_AVATAR_URL, avatarUrl)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -77,14 +80,16 @@ class CallService : Service() {
             channelName: String,
             callerName: String,
             callerId: String,
-            token: String? = null
+            displayName: String? = null,
+            avatarUrl: String? = null
         ) {
             val intent = Intent(context, CallService::class.java).apply {
                 action = ACTION_START_VIDEO_CALL
                 putExtra(EXTRA_CHANNEL_NAME, channelName)
                 putExtra(EXTRA_CALLER_NAME, callerName)
                 putExtra(EXTRA_CALLER_ID, callerId)
-                putExtra(EXTRA_TOKEN, token)
+                putExtra(EXTRA_DISPLAY_NAME, displayName)
+                putExtra(EXTRA_AVATAR_URL, avatarUrl)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -104,8 +109,8 @@ class CallService : Service() {
     // Binder for activity binding
     private val binder = CallServiceBinder()
 
-    // Agora manager
-    lateinit var agoraManager: AgoraManager
+    // Jitsi Meet manager
+    lateinit var jitsiMeetManager: JitsiMeetManager
         private set
 
     // Service state
@@ -127,11 +132,14 @@ class CallService : Service() {
         Log.d(TAG, "CallService created")
 
         createNotificationChannel()
-        agoraManager = AgoraManager(applicationContext)
-        agoraManager.initialize()
+        jitsiMeetManager = JitsiMeetManager(applicationContext)
+        jitsiMeetManager.initialize()
+
+        // Register event receiver for Jitsi events
+        jitsiMeetManager.registerEventReceiver(this)
 
         // Setup call event listener
-        agoraManager.onCallEventListener = object : AgoraManager.CallEventListener {
+        jitsiMeetManager.onCallEventListener = object : JitsiMeetManager.CallEventListener {
             override fun onCallConnected() {
                 _serviceState.value = ServiceState.InCall
                 startDurationCounter()
@@ -142,15 +150,12 @@ class CallService : Service() {
                 stopSelf()
             }
 
-            override fun onRemoteUserJoined(uid: Int) {
-                Log.d(TAG, "Remote user joined: $uid")
+            override fun onRemoteUserJoined(data: HashMap<String, Any>?) {
+                Log.d(TAG, "Remote user joined")
             }
 
-            override fun onRemoteUserLeft(uid: Int) {
-                // If the other user left, end the call
-                if (agoraManager.remoteUsers.value.isEmpty()) {
-                    endCurrentCall()
-                }
+            override fun onRemoteUserLeft(data: HashMap<String, Any>?) {
+                Log.d(TAG, "Remote user left")
             }
 
             override fun onError(code: Int, message: String) {
@@ -172,20 +177,22 @@ class CallService : Service() {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME) ?: return START_NOT_STICKY
                 val callerName = intent.getStringExtra(EXTRA_CALLER_NAME) ?: "Unknown"
                 val callerId = intent.getStringExtra(EXTRA_CALLER_ID) ?: ""
-                val token = intent.getStringExtra(EXTRA_TOKEN)
+                val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
+                val avatarUrl = intent.getStringExtra(EXTRA_AVATAR_URL)
 
                 startForegroundWithNotification("Voice call with $callerName", false)
-                startVoiceCallInternal(channelName, callerName, callerId, token)
+                startVoiceCallInternal(channelName, callerName, callerId, displayName, avatarUrl)
             }
 
             ACTION_START_VIDEO_CALL -> {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME) ?: return START_NOT_STICKY
                 val callerName = intent.getStringExtra(EXTRA_CALLER_NAME) ?: "Unknown"
                 val callerId = intent.getStringExtra(EXTRA_CALLER_ID) ?: ""
-                val token = intent.getStringExtra(EXTRA_TOKEN)
+                val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME)
+                val avatarUrl = intent.getStringExtra(EXTRA_AVATAR_URL)
 
                 startForegroundWithNotification("Video call with $callerName", true)
-                startVideoCallInternal(channelName, callerName, callerId, token)
+                startVideoCallInternal(channelName, callerName, callerId, displayName, avatarUrl)
             }
 
             ACTION_END_CALL, ACTION_DECLINE_CALL -> {
@@ -193,27 +200,15 @@ class CallService : Service() {
             }
 
             ACTION_MUTE -> {
-                agoraManager.setMuted(true)
+                jitsiMeetManager.setMuted(true)
             }
 
             ACTION_UNMUTE -> {
-                agoraManager.setMuted(false)
-            }
-
-            ACTION_SPEAKER_ON -> {
-                agoraManager.setSpeakerEnabled(true)
-            }
-
-            ACTION_SPEAKER_OFF -> {
-                agoraManager.setSpeakerEnabled(false)
+                jitsiMeetManager.setMuted(false)
             }
 
             ACTION_TOGGLE_VIDEO -> {
-                agoraManager.toggleVideo()
-            }
-
-            ACTION_SWITCH_CAMERA -> {
-                agoraManager.switchCamera()
+                jitsiMeetManager.toggleVideo()
             }
         }
 
@@ -230,7 +225,8 @@ class CallService : Service() {
 
         durationJob?.cancel()
         serviceScope.cancel()
-        agoraManager.destroy()
+        jitsiMeetManager.unregisterEventReceiver(this)
+        jitsiMeetManager.destroy()
         releaseWakeLock()
 
         _serviceState.value = ServiceState.Idle
@@ -244,7 +240,8 @@ class CallService : Service() {
         channelName: String,
         callerName: String,
         callerId: String,
-        token: String?
+        displayName: String?,
+        avatarUrl: String?
     ) {
         _currentCall.value = CallInfo(
             channelName = channelName,
@@ -257,7 +254,7 @@ class CallService : Service() {
         _serviceState.value = ServiceState.Connecting
         acquireWakeLock()
 
-        val result = agoraManager.joinVoiceCall(channelName, token)
+        val result = jitsiMeetManager.joinVoiceCall(channelName, displayName, avatarUrl)
         if (result.isFailure) {
             Log.e(TAG, "Failed to start voice call", result.exceptionOrNull())
             _serviceState.value = ServiceState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
@@ -272,7 +269,8 @@ class CallService : Service() {
         channelName: String,
         callerName: String,
         callerId: String,
-        token: String?
+        displayName: String?,
+        avatarUrl: String?
     ) {
         _currentCall.value = CallInfo(
             channelName = channelName,
@@ -285,7 +283,7 @@ class CallService : Service() {
         _serviceState.value = ServiceState.Connecting
         acquireWakeLock()
 
-        val result = agoraManager.joinVideoCall(channelName, token)
+        val result = jitsiMeetManager.joinVideoCall(channelName, displayName, avatarUrl)
         if (result.isFailure) {
             Log.e(TAG, "Failed to start video call", result.exceptionOrNull())
             _serviceState.value = ServiceState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
@@ -299,7 +297,7 @@ class CallService : Service() {
     fun endCurrentCall() {
         Log.d(TAG, "Ending call")
         durationJob?.cancel()
-        agoraManager.leaveCall()
+        jitsiMeetManager.leaveCall()
         releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -314,7 +312,7 @@ class CallService : Service() {
             val startTime = _currentCall.value?.startTime ?: System.currentTimeMillis()
             while (isActive) {
                 val duration = System.currentTimeMillis() - startTime
-                agoraManager.updateDuration(duration)
+                jitsiMeetManager.updateDuration(duration)
                 delay(1000)
             }
         }
@@ -389,7 +387,7 @@ class CallService : Service() {
         )
 
         // Mute action
-        val isMuted = agoraManager.isMuted.value
+        val isMuted = jitsiMeetManager.isMuted.value
         val muteIntent = Intent(this, CallService::class.java).apply {
             action = if (isMuted) ACTION_UNMUTE else ACTION_MUTE
         }
@@ -418,7 +416,7 @@ class CallService : Service() {
             )
 
         // Show duration if in call
-        val duration = agoraManager.callDuration.value
+        val duration = jitsiMeetManager.callDuration.value
         if (duration > 0) {
             val minutes = duration / 60000
             val seconds = (duration % 60000) / 1000

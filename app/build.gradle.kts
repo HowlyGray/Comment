@@ -29,11 +29,11 @@ android {
             useSupportLibrary = true
         }
 
-        // Agora App ID from local.properties or environment
+        // Jitsi Meet server URL from local.properties or environment
         buildConfigField(
             "String",
-            "AGORA_APP_ID",
-            "\"${project.findProperty("AGORA_APP_ID") ?: "YOUR_AGORA_APP_ID"}\""
+            "JITSI_SERVER_URL",
+            "\"${project.findProperty("JITSI_SERVER_URL") ?: "https://meet.jit.si"}\""
         )
     }
 
@@ -144,10 +144,8 @@ dependencies {
     // WorkManager for background sync
     implementation("androidx.work:work-runtime-ktx:2.11.0")
 
-    // ===== PHASE 4: Calls (Agora SDK) =====
-    // Agora Voice/Video SDK
-    //noinspection Aligned16KB
-    implementation("io.agora.rtc:full-sdk:4.6.2")
+    // ===== PHASE 4: Calls (Jitsi Meet SDK) =====
+    implementation("org.jitsi.react:jitsi-meet-sdk:10.1.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
