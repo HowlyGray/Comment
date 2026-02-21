@@ -1,16 +1,9 @@
 package com.memoryshare.app.ui.screens.calls
 
-import android.view.SurfaceView
-import android.view.ViewGroup
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,14 +15,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.memoryshare.app.MemoryShareApplication
-import com.memoryshare.app.services.calls.AgoraManager
-import kotlinx.coroutines.delay
+import com.memoryshare.app.services.calls.JitsiMeetManager
 
 /**
  * Video Call Screen
- * Full-screen video call interface with Agora SDK
+ * Launches a Jitsi Meet call and shows a pre-call / post-call UI.
+ * The actual call rendering is handled by JitsiMeetActivity (Jitsi SDK).
  */
 @Composable
 fun VideoCallScreen(
@@ -41,58 +33,25 @@ fun VideoCallScreen(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as MemoryShareApplication
-    val agoraManager = remember { app.agoraManager }
+    val jitsiMeetManager = remember { app.jitsiMeetManager }
 
-    val callState by agoraManager.callState.collectAsState()
-    val isMuted by agoraManager.isMuted.collectAsState()
-    val isSpeakerOn by agoraManager.isSpeakerOn.collectAsState()
-    val isVideoEnabled by agoraManager.isVideoEnabled.collectAsState()
-    val isFrontCamera by agoraManager.isFrontCamera.collectAsState()
-    val remoteUsers by agoraManager.remoteUsers.collectAsState()
-    val callDuration by agoraManager.callDuration.collectAsState()
+    val callState by jitsiMeetManager.callState.collectAsState()
+    val isMuted by jitsiMeetManager.isMuted.collectAsState()
+    val isVideoEnabled by jitsiMeetManager.isVideoEnabled.collectAsState()
+    val callDuration by jitsiMeetManager.callDuration.collectAsState()
 
-    var showControls by remember { mutableStateOf(true) }
-    var localSurfaceView by remember { mutableStateOf<SurfaceView?>(null) }
-    var remoteSurfaceView by remember { mutableStateOf<SurfaceView?>(null) }
-
-    // Auto-hide controls
-    LaunchedEffect(showControls) {
-        if (showControls && callState is AgoraManager.CallState.Connected) {
-            delay(5000)
-            showControls = false
-        }
-    }
-
-    // Join call on launch
+    // Launch the Jitsi call on first composition
     LaunchedEffect(Unit) {
-        agoraManager.initialize()
         if (isVideo) {
-            agoraManager.joinVideoCall(channelName, token)
+            jitsiMeetManager.joinVideoCall(channelName, callerName)
         } else {
-            agoraManager.joinVoiceCall(channelName, token)
+            jitsiMeetManager.joinVoiceCall(channelName, callerName)
         }
     }
 
-    // Setup local video
-    LaunchedEffect(localSurfaceView, isVideoEnabled) {
-        localSurfaceView?.let { surface ->
-            if (isVideoEnabled) {
-                agoraManager.setupLocalVideo(surface)
-            }
-        }
-    }
-
-    // Setup remote video
-    LaunchedEffect(remoteSurfaceView, remoteUsers) {
-        val remoteUid = remoteUsers.firstOrNull()
-        if (remoteUid != null && remoteSurfaceView != null) {
-            agoraManager.setupRemoteVideo(remoteUid, remoteSurfaceView!!)
-        }
-    }
-
-    // Handle call end
+    // Handle call end from Jitsi
     LaunchedEffect(callState) {
-        if (callState is AgoraManager.CallState.Ended) {
+        if (callState is JitsiMeetManager.CallState.Ended) {
             onCallEnd()
         }
     }
@@ -100,224 +59,116 @@ fun VideoCallScreen(
     // Cleanup on dispose
     DisposableEffect(Unit) {
         onDispose {
-            agoraManager.leaveCall()
+            jitsiMeetManager.leaveCall()
         }
     }
 
+    // This screen serves as a fallback UI while the Jitsi Activity is active.
+    // It is visible when the user navigates back from the Jitsi PiP or when
+    // the call hasn't started yet / has ended.
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                showControls = !showControls
-            }
     ) {
-        // Remote video (full screen)
-        if (isVideo && remoteUsers.isNotEmpty()) {
-            AndroidView(
-                factory = { ctx ->
-                    SurfaceView(ctx).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        remoteSurfaceView = this
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            // Avatar placeholder for voice call or when no remote video
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(60.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = callerName,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = when (callState) {
-                        is AgoraManager.CallState.Connecting -> "Connecting..."
-                        is AgoraManager.CallState.Connected -> formatDuration(callDuration)
-                        is AgoraManager.CallState.Reconnecting -> "Reconnecting..."
-                        is AgoraManager.CallState.Error -> (callState as AgoraManager.CallState.Error).message
-                        else -> ""
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-            }
-        }
-
-        // Local video (small preview)
-        if (isVideo && isVideoEnabled) {
+        // Center content: avatar + caller info + status
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .size(120.dp, 160.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.DarkGray)
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
             ) {
-                AndroidView(
-                    factory = { ctx ->
-                        SurfaceView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            localSurfaceView = this
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(60.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-
-                // Switch camera button
-                IconButton(
-                    onClick = { agoraManager.switchCamera() },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(4.dp)
-                        .size(32.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cameraswitch,
-                        contentDescription = "Switch camera",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = callerName,
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = when (callState) {
+                    is JitsiMeetManager.CallState.Connecting -> "Connecting..."
+                    is JitsiMeetManager.CallState.Connected -> formatDuration(callDuration)
+                    is JitsiMeetManager.CallState.Reconnecting -> "Reconnecting..."
+                    is JitsiMeetManager.CallState.Error ->
+                        (callState as JitsiMeetManager.CallState.Error).message
+                    is JitsiMeetManager.CallState.Ended -> "Call ended"
+                    else -> ""
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.7f)
+            )
         }
 
-        // Call info (top)
-        AnimatedVisibility(
-            visible = showControls,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter)
+        // Bottom controls
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 48.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 48.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (isVideo && remoteUsers.isNotEmpty()) {
-                    Text(
-                        text = callerName,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+            // Mute button
+            CallControlButton(
+                icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                label = if (isMuted) "Unmute" else "Mute",
+                isActive = isMuted,
+                onClick = { jitsiMeetManager.toggleMute() }
+            )
 
-                    Text(
-                        text = if (callState is AgoraManager.CallState.Connected)
-                            formatDuration(callDuration)
-                        else
-                            "Connecting...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-
-        // Controls (bottom)
-        AnimatedVisibility(
-            visible = showControls,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 48.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Mute button
+            // Video toggle (video call only)
+            if (isVideo) {
                 CallControlButton(
-                    icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
-                    label = if (isMuted) "Unmute" else "Mute",
-                    isActive = isMuted,
-                    onClick = { agoraManager.toggleMute() }
+                    icon = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                    label = if (isVideoEnabled) "Video On" else "Video Off",
+                    isActive = !isVideoEnabled,
+                    onClick = { jitsiMeetManager.toggleVideo() }
                 )
+            }
 
-                // Speaker button (voice call only)
-                if (!isVideo) {
-                    CallControlButton(
-                        icon = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeDown,
-                        label = if (isSpeakerOn) "Speaker" else "Earpiece",
-                        isActive = isSpeakerOn,
-                        onClick = { agoraManager.toggleSpeaker() }
-                    )
-                }
-
-                // Video toggle (video call only)
-                if (isVideo) {
-                    CallControlButton(
-                        icon = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                        label = if (isVideoEnabled) "Video On" else "Video Off",
-                        isActive = !isVideoEnabled,
-                        onClick = { agoraManager.toggleVideo() }
-                    )
-                }
-
-                // End call button
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Color.Red)
-                        .clickable {
-                            agoraManager.leaveCall()
-                            onCallEnd()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CallEnd,
-                        contentDescription = "End call",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+            // End call button
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color.Red)
+                    .clickable {
+                        jitsiMeetManager.leaveCall()
+                        onCallEnd()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CallEnd,
+                    contentDescription = "End call",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
 
         // Connection status overlay
-        if (callState is AgoraManager.CallState.Connecting ||
-            callState is AgoraManager.CallState.Reconnecting
+        if (callState is JitsiMeetManager.CallState.Connecting ||
+            callState is JitsiMeetManager.CallState.Reconnecting
         ) {
             Box(
                 modifier = Modifier
@@ -329,7 +180,7 @@ fun VideoCallScreen(
                     CircularProgressIndicator(color = Color.White)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (callState is AgoraManager.CallState.Reconnecting)
+                        text = if (callState is JitsiMeetManager.CallState.Reconnecting)
                             "Reconnecting..."
                         else
                             "Connecting...",

@@ -16,9 +16,14 @@
 -keep class com.google.android.gms.** { *; }
 -dontwarn com.google.android.gms.**
 
-# ==================== Agora SDK ====================
--keep class io.agora.** { *; }
--dontwarn io.agora.**
+# ==================== Jitsi Meet SDK ====================
+-keep class org.jitsi.meet.** { *; }
+-keep class org.jitsi.meet.sdk.** { *; }
+-dontwarn org.jitsi.**
+-keep class com.facebook.react.** { *; }
+-dontwarn com.facebook.react.**
+-keep class com.facebook.hermes.** { *; }
+-dontwarn com.facebook.hermes.**
 
 # ==================== Kotlin Coroutines ====================
 -dontwarn kotlinx.coroutines.**

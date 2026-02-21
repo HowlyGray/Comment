@@ -6,7 +6,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.memoryshare.app.data.local.AppDatabase
-import com.memoryshare.app.services.calls.AgoraManager
+import com.memoryshare.app.services.calls.JitsiMeetManager
 import com.memoryshare.app.services.firebase.FirebaseAuthManager
 import com.memoryshare.app.services.firebase.FirebaseStorageManager
 import com.memoryshare.app.services.firebase.FirestoreManager
@@ -59,7 +59,7 @@ class MemoryShareApplication : Application() {
         private set
 
     // Call services
-    lateinit var agoraManager: AgoraManager
+    lateinit var jitsiMeetManager: JitsiMeetManager
         private set
 
     // Flag to check if Firebase is initialized
@@ -121,7 +121,8 @@ class MemoryShareApplication : Application() {
         )
 
         // Call services
-        agoraManager = AgoraManager(this)
+        jitsiMeetManager = JitsiMeetManager(this)
+        jitsiMeetManager.initialize()
 
         // Initialize presence tracking for current user
         Firebase.auth.currentUser?.uid?.let { userId ->
@@ -163,6 +164,6 @@ class MemoryShareApplication : Application() {
         presenceManager.cleanup()
         realtimeSyncManager.cleanup()
         audioRecorderManager.release()
-        agoraManager.destroy()
+        jitsiMeetManager.destroy()
     }
 }
